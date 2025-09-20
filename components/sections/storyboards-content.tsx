@@ -3,9 +3,15 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { useState } from "react"
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { useState, useCallback } from "react"
 import { Plus, FileText, Calendar, Clock, Trash2 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { ScreenplayEditor } from "./screenplay-editor"
 
 interface Storyboard {
   id: string
@@ -79,143 +85,335 @@ const typeColors = {
   synopsis: "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300",
 }
 
-export function StoryboardsContent() {
-  const [storyboards, setStoryboards] = useState<Storyboard[]>(mockStoryboards)
+interface StoryboardCardProps {
+  storyboard?: Storyboard
+  onDelete: (id: string) => void
+  onCreateDialogOpen: boolean
+  onCreateDialogChange: (open: boolean) => void
+  newStoryboardName: string
+  setNewStoryboardName: (name: string) => void
+  newStoryboardType: "screenplay" | "synopsis"
+  setNewStoryboardType: (type: "screenplay" | "synopsis") => void
+  onCreateStoryboard: () => void
+  onDialogClose: () => void
+  onNameChange: (e: React.ChangeEvent<HTMLInputElement>) => void
+  onTypeChange: (value: "screenplay" | "synopsis") => void
+  onScreenplayClick: (id: string) => void
+}
 
-  const handleAddNew = () => {
-    // In a real app, this would open a modal or navigate to a new storyboard page
-    console.log("Add new storyboard")
-  }
-
-
-  const handleDelete = (id: string) => {
-    setStoryboards((prev) => prev.filter((s) => s.id !== id))
-  }
-
-  const StoryboardCard = ({ storyboard }: { storyboard?: Storyboard }) => {
-    if (!storyboard) {
-      // Add New card
-      return (
-        <Card className="h-64 border-2 border-dashed border-muted-foreground/25 hover:border-primary/50 hover:shadow-2xl hover:shadow-primary/10 hover:backdrop-blur-sm hover:bg-card/80 transition-all duration-500 cursor-pointer group relative overflow-hidden">
-          {/* Liquid glass overlay for add new card */}
-          <div className="absolute inset-0 bg-gradient-to-br from-primary/12 via-transparent to-accent/12 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
-          
-          {/* Flowing liquid effect for add new card */}
-          <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none">
-            <div className="absolute -top-1/2 -left-1/2 w-full h-full bg-gradient-to-br from-primary/15 via-accent/8 to-transparent rounded-full blur-xl animate-pulse" 
-                 style={{ animation: 'liquid-flow 3s ease-in-out infinite' }} />
-            <div className="absolute -bottom-1/2 -right-1/2 w-full h-full bg-gradient-to-tl from-accent/15 via-primary/8 to-transparent rounded-full blur-xl animate-pulse" 
-                 style={{ animation: 'liquid-flow 3s ease-in-out infinite 1.5s' }} />
-          </div>
-          
-          {/* Glassy border effect for add new card */}
-          <div className="absolute inset-0 ring-1 ring-primary/0 group-hover:ring-primary/30 transition-all duration-500 rounded-lg" />
-          
-          {/* Reflective shine effect for add new card */}
-          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/8 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none transform -skew-x-12 translate-x-full group-hover:translate-x-[-200%] transition-transform duration-1000" />
-          
-          <CardContent className="h-full flex flex-col items-center justify-center p-6 relative z-10">
-            <Button
-              variant="ghost"
-              size="lg"
-              className="h-full w-full flex flex-col gap-4 text-muted-foreground group-hover:text-primary transition-colors"
-              onClick={handleAddNew}
-            >
-              <div className="p-4 rounded-full bg-muted group-hover:bg-primary/10 transition-colors">
-                <Plus className="h-8 w-8" />
-              </div>
-              <div className="text-center">
-                <p className="font-semibold">Add New</p>
-                <p className="text-sm">Create a new storyboard</p>
-              </div>
-            </Button>
-          </CardContent>
-        </Card>
-      )
-    }
-
+const StoryboardCard = ({ 
+  storyboard, 
+  onDelete, 
+  onCreateDialogOpen, 
+  onCreateDialogChange, 
+  newStoryboardName, 
+  setNewStoryboardName, 
+  newStoryboardType, 
+  setNewStoryboardType, 
+  onCreateStoryboard, 
+  onDialogClose,
+  onNameChange,
+  onTypeChange,
+  onScreenplayClick
+}: StoryboardCardProps) => {
+  if (!storyboard) {
+    // Add New card
     return (
-      <Card className="h-64 hover:shadow-2xl hover:shadow-primary/10 hover:backdrop-blur-sm hover:bg-card/80 hover:border-primary/20 transition-all duration-500 cursor-pointer group relative overflow-hidden">
-        {/* Liquid glass overlay with flowing animation */}
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/8 via-transparent to-accent/8 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+      <Card className="h-64 border-2 border-dashed border-muted-foreground/25 hover:border-primary/50 hover:shadow-2xl hover:shadow-primary/10 hover:backdrop-blur-sm hover:bg-card/80 transition-all duration-500 cursor-pointer group relative overflow-hidden">
+        {/* Liquid glass overlay for add new card */}
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/12 via-transparent to-accent/12 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
         
-        {/* Flowing liquid effect */}
+        {/* Flowing liquid effect for add new card */}
         <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none">
-          <div className="absolute -top-1/2 -left-1/2 w-full h-full bg-gradient-to-br from-primary/10 via-accent/5 to-transparent rounded-full blur-xl animate-pulse" 
+          <div className="absolute -top-1/2 -left-1/2 w-full h-full bg-gradient-to-br from-primary/15 via-accent/8 to-transparent rounded-full blur-xl animate-pulse" 
                style={{ animation: 'liquid-flow 3s ease-in-out infinite' }} />
-          <div className="absolute -bottom-1/2 -right-1/2 w-full h-full bg-gradient-to-tl from-accent/10 via-primary/5 to-transparent rounded-full blur-xl animate-pulse" 
+          <div className="absolute -bottom-1/2 -right-1/2 w-full h-full bg-gradient-to-tl from-accent/15 via-primary/8 to-transparent rounded-full blur-xl animate-pulse" 
                style={{ animation: 'liquid-flow 3s ease-in-out infinite 1.5s' }} />
         </div>
         
-        {/* Glassy border effect */}
+        {/* Glassy border effect for add new card */}
         <div className="absolute inset-0 ring-1 ring-primary/0 group-hover:ring-primary/30 transition-all duration-500 rounded-lg" />
         
-        {/* Reflective shine effect */}
-        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none transform -skew-x-12 translate-x-full group-hover:translate-x-[-200%] transition-transform duration-1000" />
+        {/* Reflective shine effect for add new card */}
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/8 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none transform -skew-x-12 translate-x-full group-hover:translate-x-[-200%] transition-transform duration-1000" />
         
-        <CardHeader className="pb-2 relative z-10">
-          <div className="flex items-start justify-between">
-            <div className="flex-1 min-w-0">
-              {/* Title */}
-              <CardTitle className="text-lg truncate group-hover:text-primary transition-colors">
-                {storyboard.title}
-              </CardTitle>
-              
-              {/* Type in capital letters */}
-              <div className="mt-2">
-                <Badge className={cn("text-xs font-bold tracking-wide", typeColors[storyboard.type])}>
-                  {storyboard.type.toUpperCase()}
-                </Badge>
+        <CardContent className="h-full flex flex-col items-center justify-center p-6 relative z-10">
+          <Dialog open={onCreateDialogOpen} onOpenChange={onCreateDialogChange}>
+            <DialogTrigger asChild>
+              <Button
+                variant="ghost"
+                size="lg"
+                className="h-full w-full flex flex-col gap-4 text-muted-foreground group-hover:text-primary transition-colors"
+              >
+                <div className="p-4 rounded-full bg-muted group-hover:bg-primary/10 transition-colors">
+                  <Plus className="h-8 w-8" />
+                </div>
+                <div className="text-center">
+                  <p className="font-semibold">Add New</p>
+                  <p className="text-sm">Create a new storyboard</p>
+                </div>
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[425px]">
+              <DialogHeader>
+                <DialogTitle>Create New Storyboard</DialogTitle>
+                <DialogDescription>
+                  Enter the details for your new storyboard. You can change the name and type later.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="storyboard-name">Storyboard Name</Label>
+                  <Input
+                    id="storyboard-name"
+                    placeholder="Enter storyboard name"
+                    value={newStoryboardName}
+                    onChange={onNameChange}
+                    className="col-span-3"
+                  />
+                </div>
+                <div className="grid gap-3">
+                  <Label>Storyboard Type</Label>
+                  <RadioGroup
+                    value={newStoryboardType}
+                    onValueChange={onTypeChange}
+                    className="grid grid-cols-2 gap-4"
+                  >
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="screenplay" id="screenplay" />
+                      <Label htmlFor="screenplay" className="flex items-center gap-2">
+                        <FileText className="h-4 w-4" />
+                        Screenplay
+                      </Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="synopsis" id="synopsis" />
+                      <Label htmlFor="synopsis" className="flex items-center gap-2">
+                        <FileText className="h-4 w-4" />
+                        Synopsis
+                      </Label>
+                    </div>
+                  </RadioGroup>
+                </div>
               </div>
-            </div>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive/10 hover:text-destructive"
-              onClick={() => handleDelete(storyboard.id)}
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          </div>
-        </CardHeader>
-
-        <CardContent className="space-y-3 relative z-10">
-          {/* Content block based on type */}
-          {storyboard.type === "screenplay" ? (
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <FileText className="h-3 w-3" />
-                <span>{storyboard.sceneCount} scenes</span>
-              </div>
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <FileText className="h-3 w-3" />
-                <span>{storyboard.subsceneCount} subscenes</span>
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <FileText className="h-3 w-3" />
-                <span>{storyboard.pages} pages</span>
-              </div>
-            </div>
-          )}
-
-          {/* Dates */}
-          <div className="space-y-1 pt-2 border-t border-border/50">
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <Calendar className="h-3 w-3" />
-              <span>Created {new Date(storyboard.created).toLocaleDateString()}</span>
-            </div>
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <Clock className="h-3 w-3" />
-              <span>Modified {storyboard.lastModified}</span>
-            </div>
-          </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={onDialogClose}>
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={onCreateStoryboard}
+                  disabled={!newStoryboardName.trim()}
+                >
+                  Create Storyboard
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </CardContent>
       </Card>
     )
   }
+
+  const handleCardClick = () => {
+    if (storyboard.type === "screenplay") {
+      onScreenplayClick(storyboard.id)
+    }
+  }
+
+  return (
+    <Card 
+      className={cn(
+        "h-64 hover:shadow-2xl hover:shadow-primary/10 hover:backdrop-blur-sm hover:bg-card/80 hover:border-primary/20 transition-all duration-500 group relative overflow-hidden",
+        storyboard.type === "screenplay" ? "cursor-pointer" : "cursor-default"
+      )}
+      onClick={handleCardClick}
+    >
+      {/* Liquid glass overlay with flowing animation */}
+      <div className="absolute inset-0 bg-gradient-to-br from-primary/8 via-transparent to-accent/8 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+      
+      {/* Flowing liquid effect */}
+      <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none">
+        <div className="absolute -top-1/2 -left-1/2 w-full h-full bg-gradient-to-br from-primary/10 via-accent/5 to-transparent rounded-full blur-xl animate-pulse" 
+             style={{ animation: 'liquid-flow 3s ease-in-out infinite' }} />
+        <div className="absolute -bottom-1/2 -right-1/2 w-full h-full bg-gradient-to-tl from-accent/10 via-primary/5 to-transparent rounded-full blur-xl animate-pulse" 
+             style={{ animation: 'liquid-flow 3s ease-in-out infinite 1.5s' }} />
+      </div>
+      
+      {/* Glassy border effect */}
+      <div className="absolute inset-0 ring-1 ring-primary/0 group-hover:ring-primary/30 transition-all duration-500 rounded-lg" />
+      
+      {/* Reflective shine effect */}
+      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none transform -skew-x-12 translate-x-full group-hover:translate-x-[-200%] transition-transform duration-1000" />
+      
+      <CardHeader className="pb-2 relative z-10">
+        <div className="flex items-start justify-between">
+          <div className="flex-1 min-w-0">
+            {/* Title */}
+            <CardTitle className="text-lg truncate group-hover:text-primary transition-colors">
+              {storyboard.title}
+            </CardTitle>
+            
+            {/* Type in capital letters */}
+            <div className="mt-2">
+              <Badge className={cn("text-xs font-bold tracking-wide", typeColors[storyboard.type])}>
+                {storyboard.type.toUpperCase()}
+              </Badge>
+            </div>
+          </div>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive/10 hover:text-destructive"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete Storyboard</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Are you sure you want to delete <strong>"{storyboard.title}"</strong>? 
+                  This action cannot be undone and will permanently remove the storyboard and all its content.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction 
+                  onClick={() => onDelete(storyboard.id)}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  Delete
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
+      </CardHeader>
+
+      <CardContent className="space-y-1 relative z-10">
+        {/* Content block based on type */}
+        {storyboard.type === "screenplay" ? (
+          <div className="flex gap-2 justify-center">
+              {/* Scene Block */}
+              <div className="flex flex-col items-center space-y-1">
+                <div className="w-12 h-12 rounded-md p-1 text-center border flex items-center justify-center" style={{ backgroundColor: 'hsl(var(--primary) / 0.1)', borderColor: 'hsl(var(--primary) / 0.2)' }}>
+                  <div className="text-sm font-bold" style={{ color: 'hsl(var(--primary))' }}>
+                    {storyboard.sceneCount}
+                  </div>
+                </div>
+                <div className="text-xs text-muted-foreground font-medium">
+                  SCENES
+                </div>
+              </div>
+              
+              {/* Subscene Block */}
+              <div className="flex flex-col items-center space-y-1">
+                <div className="w-12 h-12 rounded-md p-1 text-center border flex items-center justify-center" style={{ backgroundColor: 'hsl(var(--accent) / 0.1)', borderColor: 'hsl(var(--accent) / 0.2)' }}>
+                  <div className="text-sm font-bold" style={{ color: 'hsl(var(--accent))' }}>
+                    {storyboard.subsceneCount}
+                  </div>
+                </div>
+                <div className="text-xs text-muted-foreground font-medium">
+                  SUBSCENES
+                </div>
+              </div>
+            </div>
+        ) : (
+          <div className="flex gap-2 justify-center">
+              {/* Pages Block */}
+              <div className="flex flex-col items-center space-y-1">
+                <div className="w-12 h-12 rounded-md p-1 text-center border flex items-center justify-center" style={{ backgroundColor: 'hsl(var(--secondary) / 0.1)', borderColor: 'hsl(var(--secondary) / 0.2)' }}>
+                  <div className="text-sm font-bold" style={{ color: 'hsl(var(--secondary-foreground))' }}>
+                    {storyboard.pages}
+                  </div>
+                </div>
+                <div className="text-xs text-muted-foreground font-medium">
+                  PAGES
+                </div>
+              </div>
+            </div>
+        )}
+
+        {/* Dates */}
+        <div className="space-y-1 pt-2 border-t border-border/50">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <Calendar className="h-3 w-3" />
+            <span>Created {new Date(storyboard.created).toLocaleDateString()}</span>
+          </div>
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <Clock className="h-3 w-3" />
+            <span>Modified {storyboard.lastModified}</span>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+
+export function StoryboardsContent() {
+  const [storyboards, setStoryboards] = useState<Storyboard[]>(mockStoryboards)
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
+  const [newStoryboardName, setNewStoryboardName] = useState("")
+  const [newStoryboardType, setNewStoryboardType] = useState<"screenplay" | "synopsis">("screenplay")
+  const [editingScreenplayId, setEditingScreenplayId] = useState<string | null>(null)
+
+
+
+  const handleDelete = useCallback((id: string) => {
+    setStoryboards((prev) => prev.filter((s) => s.id !== id))
+  }, [])
+
+  const handleCreateStoryboard = useCallback(() => {
+    if (!newStoryboardName.trim()) return
+
+    const newStoryboard: Storyboard = {
+      id: Date.now().toString(),
+      title: newStoryboardName.trim(),
+      type: newStoryboardType,
+      status: "draft",
+      pages: 0,
+      sceneCount: newStoryboardType === "screenplay" ? 0 : undefined,
+      subsceneCount: newStoryboardType === "screenplay" ? 0 : undefined,
+      lastModified: "Just now",
+      created: new Date().toISOString(),
+      genre: "Drama",
+    }
+
+    setStoryboards([newStoryboard, ...storyboards])
+    setNewStoryboardName("")
+    setNewStoryboardType("screenplay")
+    setIsCreateDialogOpen(false)
+  }, [newStoryboardName, newStoryboardType, storyboards])
+
+  const handleDialogClose = useCallback(() => {
+    setIsCreateDialogOpen(false)
+    setNewStoryboardName("")
+    setNewStoryboardType("screenplay")
+  }, [])
+
+  const handleDialogChange = useCallback((open: boolean) => {
+    setIsCreateDialogOpen(open)
+  }, [])
+
+  const handleNameChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setNewStoryboardName(e.target.value)
+  }, [])
+
+  const handleTypeChange = useCallback((value: "screenplay" | "synopsis") => {
+    setNewStoryboardType(value)
+  }, [])
+
+  const handleScreenplayClick = useCallback((id: string) => {
+    setEditingScreenplayId(id)
+  }, [])
+
+  const handleBackFromEditor = useCallback(() => {
+    setEditingScreenplayId(null)
+  }, [])
+
 
   // Arrange cards in rows of 4
   const arrangeInRows = () => {
@@ -229,6 +427,11 @@ export function StoryboardsContent() {
     return rows
   }
 
+  // Show screenplay editor if editing
+  if (editingScreenplayId) {
+    return <ScreenplayEditor screenplayId={editingScreenplayId} onBack={handleBackFromEditor} />
+  }
+
   return (
     <div className="space-y-8">
       <div>
@@ -240,7 +443,22 @@ export function StoryboardsContent() {
         {arrangeInRows().map((row, rowIndex) => (
           <div key={rowIndex} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {row.map((storyboard, cardIndex) => (
-              <StoryboardCard key={storyboard?.id || `add-new-${rowIndex}-${cardIndex}`} storyboard={storyboard} />
+              <StoryboardCard 
+                key={storyboard?.id || `add-new-${rowIndex}-${cardIndex}`} 
+                storyboard={storyboard}
+                onDelete={handleDelete}
+                onCreateDialogOpen={isCreateDialogOpen}
+                onCreateDialogChange={handleDialogChange}
+                newStoryboardName={newStoryboardName}
+                setNewStoryboardName={setNewStoryboardName}
+                newStoryboardType={newStoryboardType}
+                setNewStoryboardType={setNewStoryboardType}
+                onCreateStoryboard={handleCreateStoryboard}
+                onDialogClose={handleDialogClose}
+                onNameChange={handleNameChange}
+                onTypeChange={handleTypeChange}
+                onScreenplayClick={handleScreenplayClick}
+              />
             ))}
           </div>
         ))}
@@ -254,7 +472,7 @@ export function StoryboardsContent() {
             <p className="text-muted-foreground mb-4">
               Start your storyboarding journey by creating your first storyboard.
             </p>
-            <Button onClick={handleAddNew}>
+            <Button onClick={() => setIsCreateDialogOpen(true)}>
               <Plus className="h-4 w-4 mr-2" />
               Create Your First Storyboard
             </Button>

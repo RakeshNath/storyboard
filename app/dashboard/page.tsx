@@ -20,11 +20,13 @@ export default function DashboardPage() {
   const router = useRouter()
 
   useEffect(() => {
-    const currentUser = getUser()
-    if (!currentUser) {
-      router.push("/login")
-    } else {
-      setUser(currentUser)
+    if (typeof window !== "undefined") {
+      const currentUser = getUser()
+      if (!currentUser) {
+        router.push("/login")
+      } else {
+        setUser(currentUser)
+      }
     }
   }, [router])
 

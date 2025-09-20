@@ -22,15 +22,18 @@ export default function LoginPage() {
 
     // Simulate authentication
     setTimeout(() => {
-      localStorage.setItem(
-        "user",
-        JSON.stringify({
-          email,
-          name: email.split("@")[0],
-        }),
-      )
-      router.push("/dashboard")
-    }, 1000)
+      if (typeof window !== "undefined") {
+        localStorage.setItem(
+          "user",
+          JSON.stringify({
+            email,
+            name: email.split("@")[0],
+          }),
+        )
+        setIsLoading(false)
+        router.push("/dashboard")
+      }
+    }, 500)
   }
 
   return (

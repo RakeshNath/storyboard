@@ -11,6 +11,8 @@ export const getUser = (): User | null => {
 }
 
 export const logout = () => {
-  localStorage.removeItem("user")
-  window.location.href = "/login"
+  if (typeof window !== "undefined") {
+    localStorage.removeItem("user")
+    window.location.href = "/login"
+  }
 }

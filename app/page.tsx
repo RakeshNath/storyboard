@@ -1,18 +1,23 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 
 export default function HomePage() {
   const router = useRouter()
+  const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    // Check if user is logged in
-    const user = localStorage.getItem("user")
-    if (user) {
-      router.push("/dashboard")
-    } else {
-      router.push("/login")
+    // Only run on client side
+    if (typeof window !== "undefined") {
+      // Check if user is logged in
+      const user = localStorage.getItem("user")
+      if (user) {
+        router.push("/dashboard")
+      } else {
+        router.push("/login")
+      }
+      setIsLoading(false)
     }
   }, [router])
 
