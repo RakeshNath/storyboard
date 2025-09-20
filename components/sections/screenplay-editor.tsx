@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { Plus, Edit3, Trash2, Users, FileText } from "lucide-react"
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
 import { cn } from "@/lib/utils"
 
 interface Scene {
@@ -106,18 +107,18 @@ export function ScreenplayEditor({ screenplayId, onBack }: ScreenplayEditorProps
       {/* Main Content */}
       <div className="flex-1 flex overflow-hidden">
         {/* Left Panel - Scenes */}
-        <div className="w-80 border-r bg-card flex flex-col">
-          <div className="p-4 border-b">
+        <div className="w-64 border-r bg-card flex flex-col">
+          <div className="p-1 border-b">
             <div className="flex items-center justify-between">
-              <h3 className="font-semibold">Scenes</h3>
-              <Button size="sm" onClick={addScene}>
-                <Plus className="h-4 w-4 mr-2" />
-                Add Scene
+              <h3 className="font-semibold text-xs">Scenes</h3>
+              <Button size="sm" className="h-6 px-1.5 text-xs" onClick={addScene}>
+                <Plus className="h-3 w-3 mr-1" />
+                Add
               </Button>
             </div>
           </div>
           
-          <div className="flex-1 overflow-y-auto p-4 space-y-2">
+          <div className="flex-1 overflow-y-auto p-1 space-y-0.5">
             {scenes.map((scene) => (
               <Card
                 key={scene.id}
@@ -127,41 +128,41 @@ export function ScreenplayEditor({ screenplayId, onBack }: ScreenplayEditorProps
                 )}
                 onClick={() => setActiveScene(scene.id)}
               >
-                <CardHeader className="pb-2">
-                  <div className="flex items-start justify-between">
-                    <CardTitle className="text-sm">{scene.title}</CardTitle>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        deleteScene(scene.id)
-                      }}
-                    >
-                      <Trash2 className="h-3 w-3" />
-                    </Button>
+                <div className="p-1">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-xs">{scene.title}</CardTitle>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-5 w-5 p-0 text-muted-foreground hover:text-destructive"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Delete Scene</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Are you sure you want to delete <strong>"{scene.title}"</strong>? 
+                            This action cannot be undone and will permanently remove the scene and all its content.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction 
+                            onClick={() => deleteScene(scene.id)}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          >
+                            Delete
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   </div>
-                </CardHeader>
-                <CardContent className="pt-0">
-                  <p className="text-xs text-muted-foreground line-clamp-2">
-                    {scene.content || "No content yet..."}
-                  </p>
-                  {scene.characters.length > 0 && (
-                    <div className="mt-2 flex flex-wrap gap-1">
-                      {scene.characters.slice(0, 2).map((char) => (
-                        <Badge key={char} variant="outline" className="text-xs">
-                          {char}
-                        </Badge>
-                      ))}
-                      {scene.characters.length > 2 && (
-                        <Badge variant="outline" className="text-xs">
-                          +{scene.characters.length - 2}
-                        </Badge>
-                      )}
-                    </div>
-                  )}
-                </CardContent>
+                </div>
               </Card>
             ))}
           </div>
@@ -208,35 +209,33 @@ FADE OUT."
         </div>
 
         {/* Right Panel - Characters */}
-        <div className="w-80 border-l bg-card flex flex-col">
-          <div className="p-4 border-b">
+        <div className="w-64 border-l bg-card flex flex-col">
+          <div className="p-2 border-b">
             <div className="flex items-center justify-between">
-              <h3 className="font-semibold flex items-center gap-2">
-                <Users className="h-4 w-4" />
+              <h3 className="font-semibold text-sm flex items-center gap-2">
+                <Users className="h-3 w-3" />
                 Characters
               </h3>
-              <Button size="sm">
-                <Plus className="h-4 w-4 mr-2" />
+              <Button size="sm" className="h-7 px-2">
+                <Plus className="h-3 w-3 mr-1" />
                 Add
               </Button>
             </div>
           </div>
           
-          <div className="flex-1 overflow-y-auto p-4 space-y-2">
+          <div className="flex-1 overflow-y-auto p-2 space-y-1">
             {characters.map((character) => (
-              <Card key={character} className="p-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium">{character}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {scenes.filter(s => s.characters.includes(character)).length} scenes
-                    </p>
-                  </div>
-                  <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
-                    <Edit3 className="h-3 w-3" />
-                  </Button>
+              <div key={character} className="flex items-center justify-between p-1.5 rounded border bg-card hover:bg-muted/50 transition-colors">
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-xs truncate">{character}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {scenes.filter(s => s.characters.includes(character)).length} scenes
+                  </p>
                 </div>
-              </Card>
+                <Button variant="ghost" size="sm" className="h-5 w-5 p-0 ml-1">
+                  <Edit3 className="h-3 w-3" />
+                </Button>
+              </div>
             ))}
           </div>
         </div>
