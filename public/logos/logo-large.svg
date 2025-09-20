@@ -1,0 +1,26 @@
+<svg width="400" height="120" viewBox="0 0 400 120" xmlns="http://www.w3.org/2000/svg">
+  <!-- Dark blue background -->
+  <rect width="400" height="120" fill="#1a237e" rx="12"/>
+  
+  <!-- Green glow outline -->
+  <rect x="8" y="8" width="384" height="104" fill="none" stroke="#00ff88" stroke-width="3" rx="8" filter="drop-shadow(0 0 12px #00ff88)"/>
+  
+  <!-- Hand with pen illustration (continuous line art, light blue/cyan with glow) -->
+  <g stroke="#00ffff" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round" filter="drop-shadow(0 0 6px #00ffff)">
+    <!-- Writing surface line -->
+    <line x1="60" y1="55" x2="340" y2="55"/>
+    
+    <!-- Hand and pen (continuous line art style) -->
+    <path d="M80 50 L85 45 L90 50 L95 45 L100 50 L95 55 L90 50 L85 55 L80 50"/>
+    <path d="M100 50 L110 40 L115 45 L120 40"/>
+    <path d="M85 55 L80 60 L85 65 L90 60 L85 55"/>
+  </g>
+  
+  <!-- STORYBOARD text (golden yellow with dark gray shadow) -->
+  <text x="200" y="90" text-anchor="middle" fill="#ffd700" font-family="Arial Black, Arial, sans-serif" font-size="28" font-weight="900" filter="drop-shadow(3px 3px 6px #333)">
+    STORYBOARD
+  </text>
+  
+  <!-- Light gray underline -->
+  <line x1="120" y1="100" x2="280" y2="100" stroke="#ccc" stroke-width="2"/>
+</svg>

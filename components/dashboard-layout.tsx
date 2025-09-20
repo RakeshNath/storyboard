@@ -4,11 +4,12 @@ import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { cn } from "@/lib/utils"
 import type { User } from "@/lib/auth"
-import { type LucideIcon, Film } from "lucide-react"
+import { type LucideIcon, Film, RefreshCw } from "lucide-react"
 import { HomeContent } from "./sections/home-content"
 import { ProfileContent } from "./sections/profile-content"
 import { ThemesContent } from "./sections/themes-content"
 import { StoryboardsContent } from "./sections/storyboards-content"
+import { PlaygroundContent } from "./sections/playground-content"
 
 interface NavigationItem {
   id: string
@@ -33,6 +34,19 @@ export function DashboardLayout({ user, navigationItems, activeSection, onSectio
     }
   }
 
+  const handleClearCache = () => {
+    // Clear localStorage
+    localStorage.clear()
+    
+    // Show confirmation
+    alert("Cache cleared! The page will refresh in 2 seconds.")
+    
+    // Refresh the page after a short delay
+    setTimeout(() => {
+      window.location.reload()
+    }, 2000)
+  }
+
   const renderContent = () => {
     switch (activeSection) {
       case "home":
@@ -43,6 +57,8 @@ export function DashboardLayout({ user, navigationItems, activeSection, onSectio
         return <ThemesContent />
       case "storyboards":
         return <StoryboardsContent />
+      case "playground":
+        return <PlaygroundContent />
       default:
         return <HomeContent user={user} />
     }
@@ -58,6 +74,8 @@ export function DashboardLayout({ user, navigationItems, activeSection, onSectio
         return "Themes"
       case "storyboards":
         return "Storyboards"
+      case "playground":
+        return "Playground"
       default:
         return "Dashboard"
     }
@@ -134,9 +152,21 @@ export function DashboardLayout({ user, navigationItems, activeSection, onSectio
                   {activeSection === "profile" && "Manage your account settings and preferences"}
                   {activeSection === "themes" && "Customize your writing environment"}
                   {activeSection === "storyboards" && "Manage your storyboard projects"}
+                  {activeSection === "playground" && "Your experimental space for testing new features and ideas"}
                 </p>
               </div>
-              <div className="text-sm text-muted-foreground">Welcome back, {user.name}</div>
+              <div className="flex items-center gap-4">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleClearCache}
+                  className="text-xs"
+                >
+                  <RefreshCw className="h-3 w-3 mr-1" />
+                  Clear Cache
+                </Button>
+                <div className="text-sm text-muted-foreground">Welcome back, {user.name}</div>
+              </div>
             </div>
           </header>
 

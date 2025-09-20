@@ -28,6 +28,7 @@ export default function LoginPage() {
           JSON.stringify({
             email,
             name: email.split("@")[0],
+            theme: "minimalist", // Set default theme for new users
           }),
         )
         setIsLoading(false)

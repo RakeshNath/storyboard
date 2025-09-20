@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { useState, useEffect } from "react"
 import { Check } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { getUserTheme, updateUserTheme } from "@/lib/auth"
 
 interface Theme {
   id: string
@@ -165,33 +166,33 @@ const themes: Theme[] = [
     name: "Indie Spirit",
     description: "Creative and vibrant theme for independent filmmakers",
     colors: {
-      primary: "oklch(0.6 0.2 320)",
-      primaryForeground: "oklch(0.98 0.005 320)",
-      secondary: "oklch(0.3 0.1 320)",
-      secondaryForeground: "oklch(0.85 0.02 320)",
-      background: "oklch(0.1 0.02 320)",
-      foreground: "oklch(0.9 0.02 320)",
-      card: "oklch(0.14 0.03 320)",
-      cardForeground: "oklch(0.9 0.02 320)",
-      popover: "oklch(0.14 0.03 320)",
-      popoverForeground: "oklch(0.9 0.02 320)",
-      muted: "oklch(0.3 0.1 320)",
-      mutedForeground: "oklch(0.65 0.05 320)",
-      accent: "oklch(0.4 0.12 320)",
-      accentForeground: "oklch(0.85 0.02 320)",
+      primary: "oklch(0.65 0.15 320)",
+      primaryForeground: "oklch(0.95 0.01 320)",
+      secondary: "oklch(0.55 0.08 320)",
+      secondaryForeground: "oklch(0.25 0.02 320)",
+      background: "oklch(0.96 0.01 320)",
+      foreground: "oklch(0.2 0.01 320)",
+      card: "oklch(0.98 0.005 320)",
+      cardForeground: "oklch(0.2 0.01 320)",
+      popover: "oklch(0.98 0.005 320)",
+      popoverForeground: "oklch(0.2 0.01 320)",
+      muted: "oklch(0.88 0.03 320)",
+      mutedForeground: "oklch(0.45 0.02 320)",
+      accent: "oklch(0.75 0.08 320)",
+      accentForeground: "oklch(0.25 0.02 320)",
       destructive: "oklch(0.55 0.22 25)",
-      destructiveForeground: "oklch(0.9 0.02 320)",
-      border: "oklch(0.35 0.08 320)",
-      input: "oklch(0.3 0.1 320)",
-      ring: "oklch(0.7 0.18 320)",
-      sidebar: "oklch(0.14 0.03 320)",
-      sidebarForeground: "oklch(0.9 0.02 320)",
-      sidebarPrimary: "oklch(0.7 0.18 320)",
-      sidebarPrimaryForeground: "oklch(0.1 0.02 320)",
-      sidebarAccent: "oklch(0.3 0.1 320)",
-      sidebarAccentForeground: "oklch(0.85 0.02 320)",
-      sidebarBorder: "oklch(0.35 0.08 320)",
-      sidebarRing: "oklch(0.7 0.18 320)",
+      destructiveForeground: "oklch(0.95 0.01 320)",
+      border: "oklch(0.82 0.03 320)",
+      input: "oklch(0.88 0.03 320)",
+      ring: "oklch(0.65 0.15 320)",
+      sidebar: "oklch(0.92 0.02 320)",
+      sidebarForeground: "oklch(0.2 0.01 320)",
+      sidebarPrimary: "oklch(0.65 0.15 320)",
+      sidebarPrimaryForeground: "oklch(0.95 0.01 320)",
+      sidebarAccent: "oklch(0.85 0.05 320)",
+      sidebarAccentForeground: "oklch(0.25 0.02 320)",
+      sidebarBorder: "oklch(0.82 0.03 320)",
+      sidebarRing: "oklch(0.65 0.15 320)",
     },
     textStyle: {
       heading: "font-bold tracking-tight",
@@ -241,33 +242,33 @@ const themes: Theme[] = [
     name: "Cyberpunk",
     description: "Futuristic neon theme for sci-fi screenwriters",
     colors: {
-      primary: "oklch(0.7 0.25 180)",
-      primaryForeground: "oklch(0.08 0.05 180)",
-      secondary: "oklch(0.3 0.15 180)",
-      secondaryForeground: "oklch(0.85 0.1 180)",
-      background: "oklch(0.08 0.05 180)",
-      foreground: "oklch(0.85 0.1 180)",
-      card: "oklch(0.12 0.08 180)",
-      cardForeground: "oklch(0.85 0.1 180)",
-      popover: "oklch(0.12 0.08 180)",
-      popoverForeground: "oklch(0.85 0.1 180)",
-      muted: "oklch(0.3 0.15 180)",
-      mutedForeground: "oklch(0.65 0.12 180)",
-      accent: "oklch(0.4 0.2 180)",
-      accentForeground: "oklch(0.85 0.1 180)",
+      primary: "oklch(0.65 0.18 180)",
+      primaryForeground: "oklch(0.95 0.01 180)",
+      secondary: "oklch(0.55 0.08 180)",
+      secondaryForeground: "oklch(0.25 0.02 180)",
+      background: "oklch(0.96 0.01 180)",
+      foreground: "oklch(0.2 0.01 180)",
+      card: "oklch(0.98 0.005 180)",
+      cardForeground: "oklch(0.2 0.01 180)",
+      popover: "oklch(0.98 0.005 180)",
+      popoverForeground: "oklch(0.2 0.01 180)",
+      muted: "oklch(0.88 0.03 180)",
+      mutedForeground: "oklch(0.45 0.02 180)",
+      accent: "oklch(0.75 0.12 180)",
+      accentForeground: "oklch(0.25 0.02 180)",
       destructive: "oklch(0.55 0.22 25)",
-      destructiveForeground: "oklch(0.85 0.1 180)",
-      border: "oklch(0.35 0.18 180)",
-      input: "oklch(0.3 0.15 180)",
-      ring: "oklch(0.75 0.3 300)",
-      sidebar: "oklch(0.12 0.08 180)",
-      sidebarForeground: "oklch(0.85 0.1 180)",
-      sidebarPrimary: "oklch(0.75 0.3 300)",
-      sidebarPrimaryForeground: "oklch(0.08 0.05 180)",
-      sidebarAccent: "oklch(0.3 0.15 180)",
-      sidebarAccentForeground: "oklch(0.85 0.1 180)",
-      sidebarBorder: "oklch(0.35 0.18 180)",
-      sidebarRing: "oklch(0.75 0.3 300)",
+      destructiveForeground: "oklch(0.95 0.01 180)",
+      border: "oklch(0.82 0.03 180)",
+      input: "oklch(0.88 0.03 180)",
+      ring: "oklch(0.65 0.18 180)",
+      sidebar: "oklch(0.92 0.02 180)",
+      sidebarForeground: "oklch(0.2 0.01 180)",
+      sidebarPrimary: "oklch(0.65 0.18 180)",
+      sidebarPrimaryForeground: "oklch(0.95 0.01 180)",
+      sidebarAccent: "oklch(0.85 0.05 180)",
+      sidebarAccentForeground: "oklch(0.25 0.02 180)",
+      sidebarBorder: "oklch(0.82 0.03 180)",
+      sidebarRing: "oklch(0.65 0.18 180)",
     },
     textStyle: {
       heading: "font-bold tracking-wide",
@@ -277,7 +278,7 @@ const themes: Theme[] = [
 ]
 
 export function ThemesContent() {
-  const [selectedTheme, setSelectedTheme] = useState("professional")
+  const [selectedTheme, setSelectedTheme] = useState("minimalist")
   const [previewTheme, setPreviewTheme] = useState<string | null>(null)
 
   // Helper function to get button styling with good contrast
@@ -300,15 +301,10 @@ export function ThemesContent() {
   }
 
   useEffect(() => {
-    const savedTheme = localStorage.getItem("selectedTheme")
-    if (savedTheme) {
-      setSelectedTheme(savedTheme)
-      // Apply the saved theme on mount
-      applyTheme(savedTheme)
-    } else {
-      // Apply default professional theme
-      applyTheme("professional")
-    }
+    const userTheme = getUserTheme()
+    setSelectedTheme(userTheme)
+    // Apply the user's saved theme on mount
+    applyTheme(userTheme)
   }, [])
 
   const applyTheme = (themeId: string) => {
@@ -346,8 +342,8 @@ export function ThemesContent() {
     root.style.setProperty("--sidebar-border", theme.colors.sidebarBorder)
     root.style.setProperty("--sidebar-ring", theme.colors.sidebarRing)
 
-    // Save theme preference
-    localStorage.setItem("selectedTheme", themeId)
+    // Save theme preference to user profile
+    updateUserTheme(themeId)
     setSelectedTheme(themeId)
     setPreviewTheme(null)
   }

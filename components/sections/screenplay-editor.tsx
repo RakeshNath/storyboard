@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils"
 
 interface Scene {
   id: string
+  number: string
   title: string
   content: string
   characters: string[]
@@ -28,13 +29,15 @@ export function ScreenplayEditor({ screenplayId, onBack }: ScreenplayEditorProps
   const [scenes, setScenes] = useState<Scene[]>([
     {
       id: "1",
-      title: "Scene 1: Opening",
+      number: "1",
+      title: "Opening",
       content: "FADE IN:\n\nEXT. CITY STREET - NIGHT\n\nThe city sleeps, but danger lurks in the shadows...",
       characters: ["JOHN", "SARAH"]
     },
     {
       id: "2", 
-      title: "Scene 2: The Chase",
+      number: "2",
+      title: "The Chase",
       content: "The chase begins. John runs through the alley, Sarah close behind...",
       characters: ["JOHN", "SARAH", "ANTAGONIST"]
     }
@@ -47,7 +50,8 @@ export function ScreenplayEditor({ screenplayId, onBack }: ScreenplayEditorProps
   const addScene = () => {
     const newScene: Scene = {
       id: (scenes.length + 1).toString(),
-      title: `Scene ${scenes.length + 1}`,
+      number: (scenes.length + 1).toString(),
+      title: "New Scene",
       content: "",
       characters: []
     }
@@ -129,8 +133,22 @@ export function ScreenplayEditor({ screenplayId, onBack }: ScreenplayEditorProps
                 onClick={() => setActiveScene(scene.id)}
               >
                 <div className="p-1">
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-xs">{scene.title}</CardTitle>
+                  <div className="flex items-center gap-1 mb-1">
+                    <span className="text-xs text-muted-foreground">Scene</span>
+                    <Input
+                      value={scene.number}
+                      onChange={(e) => updateScene(scene.id, "number", e.target.value)}
+                      className="w-8 h-6 text-xs p-1 border-none bg-transparent"
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                    <span className="text-xs text-muted-foreground">:</span>
+                    <Input
+                      value={scene.title}
+                      onChange={(e) => updateScene(scene.id, "title", e.target.value)}
+                      className="flex-1 h-6 text-xs p-1 border-none bg-transparent"
+                      placeholder="Scene title"
+                      onClick={(e) => e.stopPropagation()}
+                    />
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
                         <Button
@@ -146,7 +164,7 @@ export function ScreenplayEditor({ screenplayId, onBack }: ScreenplayEditorProps
                         <AlertDialogHeader>
                           <AlertDialogTitle>Delete Scene</AlertDialogTitle>
                           <AlertDialogDescription>
-                            Are you sure you want to delete <strong>"{scene.title}"</strong>? 
+                            Are you sure you want to delete <strong>Scene {scene.number}: {scene.title}</strong>? 
                             This action cannot be undone and will permanently remove the scene and all its content.
                           </AlertDialogDescription>
                         </AlertDialogHeader>
@@ -173,12 +191,22 @@ export function ScreenplayEditor({ screenplayId, onBack }: ScreenplayEditorProps
           {currentScene ? (
             <>
               <div className="p-4 border-b">
-                <Input
-                  value={currentScene.title}
-                  onChange={(e) => updateScene(activeScene, "title", e.target.value)}
-                  className="text-lg font-semibold border-none bg-transparent p-0 h-auto"
-                  placeholder="Scene Title"
-                />
+                <div className="flex items-center gap-2">
+                  <span className="text-lg font-semibold text-muted-foreground">Scene</span>
+                  <Input
+                    value={currentScene.number}
+                    onChange={(e) => updateScene(activeScene, "number", e.target.value)}
+                    className="w-16 text-lg font-semibold border-none bg-transparent p-0 h-auto"
+                    placeholder="#"
+                  />
+                  <span className="text-lg font-semibold text-muted-foreground">:</span>
+                  <Input
+                    value={currentScene.title}
+                    onChange={(e) => updateScene(activeScene, "title", e.target.value)}
+                    className="flex-1 text-lg font-semibold border-none bg-transparent p-0 h-auto"
+                    placeholder="Scene Title"
+                  />
+                </div>
               </div>
               
               <div className="flex-1 p-4">
