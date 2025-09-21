@@ -152,6 +152,28 @@ export function ScreenplayEditor({ screenplayId, onBack }: ScreenplayEditorProps
     }
   }
 
+  const handleCharacterBlur = (dialogueId: string, value: string) => {
+    if (value.trim().length > 0) {
+      const upperValue = value.trim().toUpperCase()
+      
+      // Check if character already exists in characterList
+      const existingCharacter = characterList.find(char => char.name === upperValue)
+      
+      if (!existingCharacter) {
+        // Add new character to characterList
+        const newCharacter: Character = {
+          id: Date.now().toString(),
+          name: upperValue,
+          description: "New character"
+        }
+        setCharacterList([...characterList, newCharacter])
+        
+        // Update the characters array for autocomplete (keeping in sync)
+        setCharacters(prev => [...prev, upperValue])
+      }
+    }
+  }
+
   const selectCharacter = (dialogueId: string, characterName: string) => {
     updateDialogueItem(dialogueId, 'character', characterName)
     setShowCharacterDropdown(null)
@@ -159,7 +181,7 @@ export function ScreenplayEditor({ screenplayId, onBack }: ScreenplayEditorProps
   }
 
   const getFilteredCharacters = (searchText: string) => {
-    return characters.filter(character => 
+    return characterList.map(char => char.name).filter(character => 
       character.toLowerCase().includes(searchText.toLowerCase())
     )
   }
@@ -201,9 +223,18 @@ export function ScreenplayEditor({ screenplayId, onBack }: ScreenplayEditorProps
   }
 
   const updateCharacterName = (id: string, name: string) => {
+    const oldCharacter = characterList.find(char => char.id === id)
+    const newName = name.toUpperCase()
+    
+    // Update characterList
     setCharacterList(characterList.map(char => 
-      char.id === id ? { ...char, name: name.toUpperCase() } : char
+      char.id === id ? { ...char, name: newName } : char
     ))
+    
+    // Update characters array for autocomplete
+    if (oldCharacter) {
+      setCharacters(prev => prev.map(char => char === oldCharacter.name ? newName : char))
+    }
   }
 
   const updateCharacterDescription = (id: string, description: string) => {
@@ -222,7 +253,13 @@ export function ScreenplayEditor({ screenplayId, onBack }: ScreenplayEditorProps
   }
 
   const deleteCharacter = (id: string) => {
-    setCharacterList(characterList.filter(char => char.id !== id))
+    const characterToDelete = characterList.find(char => char.id === id)
+    if (characterToDelete) {
+      // Remove from characterList
+      setCharacterList(characterList.filter(char => char.id !== id))
+      // Remove from characters array for autocomplete
+      setCharacters(prev => prev.filter(char => char !== characterToDelete.name))
+    }
   }
 
   const saveCharacters = () => {
@@ -231,10 +268,14 @@ export function ScreenplayEditor({ screenplayId, onBack }: ScreenplayEditorProps
     setIsCharactersDialogOpen(false)
   }
 
+  const getCharacterUsageCount = (characterName: string) => {
+    return dialogueItems.filter(item => item.character === characterName).length
+  }
+
   const currentScene = scenes.find(s => s.id === activeScene)
 
   return (
-    <div className="h-full flex flex-col bg-background">
+    <div className="h-full flex flex-col bg-transparent">
       {/* Header */}
       <div className="border-b bg-card p-4">
         <div className="flex items-center justify-between">
@@ -246,7 +287,7 @@ export function ScreenplayEditor({ screenplayId, onBack }: ScreenplayEditorProps
               <Input
                 value={scriptName}
                 onChange={(e) => setScriptName(e.target.value)}
-                className="text-xl font-bold border-none bg-transparent p-0 h-auto"
+                className="text-xl font-bold border-none !bg-transparent p-0 h-auto"
                 placeholder="Screenplay Title"
               />
               <div 
@@ -300,12 +341,24 @@ export function ScreenplayEditor({ screenplayId, onBack }: ScreenplayEditorProps
                     {characterList.map((character) => (
                       <div key={character.id} className="flex gap-3 p-3 border rounded-lg">
                         <div className="flex-1 space-y-2">
-                          <Input
-                            value={character.name}
-                            onChange={(e) => updateCharacterName(character.id, e.target.value)}
-                            placeholder="Character Name"
-                            className="font-semibold"
-                          />
+                          <div className="flex items-center gap-2">
+                            <Input
+                              value={character.name}
+                              onChange={(e) => updateCharacterName(character.id, e.target.value)}
+                              placeholder="Character Name"
+                              className="font-semibold flex-1"
+                            />
+                            {/* Character Usage Counter */}
+                            <div 
+                              className="flex items-center justify-center w-8 h-8 rounded-full text-xs font-bold text-white"
+                              style={{
+                                backgroundColor: 'var(--primary)',
+                                color: 'var(--primary-foreground)'
+                              }}
+                            >
+                              {getCharacterUsageCount(character.name)}
+                            </div>
+                          </div>
                           <Input
                             value={character.description}
                             onChange={(e) => updateCharacterDescription(character.id, e.target.value)}
@@ -359,10 +412,6 @@ export function ScreenplayEditor({ screenplayId, onBack }: ScreenplayEditorProps
                 </div>
               </DialogContent>
             </Dialog>
-            <Button size="sm" variant="outline">
-              <Edit3 className="h-4 w-4 mr-2" />
-              Edit
-            </Button>
             <Button size="sm">
               Save
             </Button>
@@ -400,14 +449,14 @@ export function ScreenplayEditor({ screenplayId, onBack }: ScreenplayEditorProps
                     <Input
                       value={scene.number}
                       onChange={(e) => updateScene(scene.id, "number", e.target.value)}
-                      className="w-4 h-5 text-xs text-muted-foreground p-0 border-none bg-transparent"
+                      className="w-4 h-5 text-xs text-muted-foreground p-0 border-none !bg-transparent"
                       onClick={(e) => e.stopPropagation()}
                     />
                     <span className="text-xs text-muted-foreground">:</span>
                     <Input
                       value={scene.title}
                       onChange={(e) => updateScene(scene.id, "title", e.target.value)}
-                      className="flex-1 h-5 text-xs text-muted-foreground p-1 border-none bg-transparent"
+                      className="flex-1 h-5 text-xs text-muted-foreground p-1 border-none !bg-transparent"
                       placeholder="Scene title"
                       onClick={(e) => e.stopPropagation()}
                     />
@@ -449,7 +498,7 @@ export function ScreenplayEditor({ screenplayId, onBack }: ScreenplayEditorProps
         </div>
 
         {/* Center Panel - Main Editor */}
-        <div className="flex-1 flex flex-col bg-background">
+        <div className="flex-1 flex flex-col bg-transparent">
           {currentScene ? (
             <>
               <div className="p-4 border-b">
@@ -474,7 +523,7 @@ export function ScreenplayEditor({ screenplayId, onBack }: ScreenplayEditorProps
               <div className="flex-1 p-4 space-y-4">
                 {/* Scene Format Dropdowns */}
                 <div className="flex gap-4 items-center justify-center">
-                  <select className="px-4 py-2 border rounded text-sm bg-background font-medium">
+                  <select className="px-4 py-2 border rounded text-sm bg-transparent font-medium">
                     <option value="">FORMAT</option>
                     <option value="ext">EXT</option>
                     <option value="int">INT</option>
@@ -483,10 +532,10 @@ export function ScreenplayEditor({ screenplayId, onBack }: ScreenplayEditorProps
                   <input 
                     type="text" 
                     placeholder="LOCATION"
-                    className="px-4 py-2 border rounded text-sm bg-background font-medium w-40"
+                    className="px-4 py-2 border rounded text-sm bg-transparent font-medium w-40"
                   />
                   
-                  <select className="px-4 py-2 border rounded text-sm bg-background font-medium">
+                  <select className="px-4 py-2 border rounded text-sm bg-transparent font-medium">
                     <option value="">TIME OF SCENE</option>
                     <option value="day">DAY</option>
                     <option value="night">NIGHT</option>
@@ -501,7 +550,7 @@ export function ScreenplayEditor({ screenplayId, onBack }: ScreenplayEditorProps
                   <input 
                     type="text" 
                     placeholder="Scene description..."
-                    className="px-4 py-2 border rounded text-sm bg-background font-medium w-full max-w-2xl"
+                    className="px-4 py-2 border rounded text-sm bg-transparent font-medium w-full max-w-2xl"
                   />
                 </div>
 
@@ -521,7 +570,7 @@ export function ScreenplayEditor({ screenplayId, onBack }: ScreenplayEditorProps
                         value={actionItem.content}
                         onChange={(e) => updateActionItem(actionItem.id, e.target.value)}
                         placeholder="Enter action description..."
-                        className="flex-1 px-4 py-2 border rounded text-sm bg-background font-medium"
+                        className="flex-1 px-4 py-2 border rounded text-sm bg-transparent font-medium"
                       />
                       
                       {/* Delete Button */}
@@ -554,14 +603,17 @@ export function ScreenplayEditor({ screenplayId, onBack }: ScreenplayEditorProps
                           value={dialogueItem.character}
                           onChange={(e) => handleCharacterInput(dialogueItem.id, e.target.value)}
                           onFocus={() => setShowCharacterDropdown(dialogueItem.id)}
-                          onBlur={() => setTimeout(() => setShowCharacterDropdown(null), 200)}
+                          onBlur={() => {
+                            setTimeout(() => setShowCharacterDropdown(null), 200)
+                            handleCharacterBlur(dialogueItem.id, dialogueItem.character)
+                          }}
                           onKeyDown={(e) => handleCharacterKeyDown(dialogueItem.id, e)}
                           placeholder="Character"
-                          className="w-24 px-4 py-2 border rounded text-sm bg-background font-medium text-center"
+                          className="w-24 px-4 py-2 border rounded text-sm bg-transparent font-medium text-center"
                         />
                         {/* Character Dropdown */}
                         {showCharacterDropdown === dialogueItem.id && (
-                          <div className="absolute top-full left-0 mt-1 w-32 bg-background border rounded-lg shadow-lg z-10">
+                          <div className="absolute top-full left-0 mt-1 w-32 bg-transparent border rounded-lg shadow-lg z-10">
                             {getFilteredCharacters(dialogueItem.character).length > 0 ? getFilteredCharacters(dialogueItem.character).map((character, index) => (
                               <button
                                 key={character}
@@ -588,7 +640,7 @@ export function ScreenplayEditor({ screenplayId, onBack }: ScreenplayEditorProps
                         value={dialogueItem.dialogue}
                         onChange={(e) => updateDialogueItem(dialogueItem.id, 'dialogue', e.target.value)}
                         placeholder="Enter dialogue..."
-                        className="flex-1 px-4 py-2 border rounded text-sm bg-background font-medium"
+                        className="flex-1 px-4 py-2 border rounded text-sm bg-transparent font-medium"
                       />
                       
                       {/* Delete Button */}

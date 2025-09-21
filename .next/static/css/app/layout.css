@@ -1322,6 +1322,9 @@ font-weight: 100 900;
   .border-l-transparent {
     border-left-color: transparent;
   }
+  .\!bg-transparent {
+    background-color: transparent !important;
+  }
   .bg-\(--color-bg\) {
     background-color: var(--color-bg);
   }
