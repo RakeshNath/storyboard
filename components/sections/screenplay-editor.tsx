@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Plus, Edit3, Trash2, Users, FileText } from "lucide-react"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
 
 interface Scene {
@@ -272,6 +273,12 @@ export function ScreenplayEditor({ screenplayId, onBack }: ScreenplayEditorProps
     return dialogueItems.filter(item => item.character === characterName).length
   }
 
+  const getCharacterSceneCount = (characterName: string) => {
+    // Check if character has dialogue in the current active scene
+    const hasDialogueInCurrentScene = dialogueItems.some(item => item.character === characterName)
+    return hasDialogueInCurrentScene ? 1 : 0
+  }
+
   const currentScene = scenes.find(s => s.id === activeScene)
 
   return (
@@ -348,15 +355,41 @@ export function ScreenplayEditor({ screenplayId, onBack }: ScreenplayEditorProps
                               placeholder="Character Name"
                               className="font-semibold flex-1"
                             />
-                            {/* Character Usage Counter */}
-                            <div 
-                              className="flex items-center justify-center w-8 h-8 rounded-full text-xs font-bold text-white"
-                              style={{
-                                backgroundColor: 'var(--primary)',
-                                color: 'var(--primary-foreground)'
-                              }}
-                            >
-                              {getCharacterUsageCount(character.name)}
+                            {/* Character Counters */}
+                            <div className="flex items-center">
+                              {/* Combined Counter Tile */}
+                              <div 
+                                className="flex w-16 h-8 rounded-lg border-2 overflow-hidden"
+                                style={{
+                                  borderColor: 'var(--primary)'
+                                }}
+                              >
+                                {/* Dialogue Counter */}
+                                <div 
+                                  className="flex flex-col items-center justify-center flex-1 border-r text-xs font-bold"
+                                  style={{
+                                    backgroundColor: 'var(--primary)',
+                                    color: 'var(--primary-foreground)',
+                                    borderRightColor: 'var(--primary-foreground)'
+                                  }}
+                                  title="Number of dialogue lines"
+                                >
+                                  <span className="text-sm font-bold">{getCharacterUsageCount(character.name)}</span>
+                                  <span className="text-[6px] leading-none">DIAL</span>
+                                </div>
+                                {/* Scene Counter */}
+                                <div 
+                                  className="flex flex-col items-center justify-center flex-1 text-xs font-bold"
+                                  style={{
+                                    backgroundColor: 'var(--accent)',
+                                    color: 'var(--accent-foreground)'
+                                  }}
+                                  title="Number of scenes"
+                                >
+                                  <span className="text-sm font-bold">{getCharacterSceneCount(character.name)}</span>
+                                  <span className="text-[6px] leading-none">SCENE</span>
+                                </div>
+                              </div>
                             </div>
                           </div>
                           <Input
@@ -365,14 +398,24 @@ export function ScreenplayEditor({ screenplayId, onBack }: ScreenplayEditorProps
                             placeholder="Character Description"
                           />
                         </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => deleteCharacter(character.id)}
-                          className="text-destructive hover:text-destructive"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => deleteCharacter(character.id)}
+                              disabled={getCharacterUsageCount(character.name) > 0 || getCharacterSceneCount(character.name) > 0}
+                              className="text-destructive hover:text-destructive disabled:opacity-30 disabled:cursor-not-allowed"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            {getCharacterUsageCount(character.name) > 0 || getCharacterSceneCount(character.name) > 0
+                              ? "Remove character from all scenes to delete"
+                              : "Delete character"}
+                          </TooltipContent>
+                        </Tooltip>
                       </div>
                     ))}
                   </div>
