@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Film } from "lucide-react"
+import Image from "next/image"
 
 export default function LoginPage() {
   const [email, setEmail] = useState("testmail@testmail.com")
@@ -42,11 +42,15 @@ export default function LoginPage() {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
-            <div className="p-3 bg-primary/10 rounded-full">
-              <Film className="h-8 w-8 text-primary" />
-            </div>
+                <Image
+                  src="/logos/logo-minimalist.png"
+                  alt="StoryBoard Logo"
+                  width={160}
+                  height={48}
+                  className="max-w-full h-auto"
+                  priority
+                />
           </div>
-          <CardTitle className="text-2xl font-bold">StoryBoard</CardTitle>
           <CardDescription>Sign in to your storyboard writing portal</CardDescription>
         </CardHeader>
         <CardContent>

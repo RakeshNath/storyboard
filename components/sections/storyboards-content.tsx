@@ -80,9 +80,18 @@ const statusColors = {
   revision: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300",
 }
 
-const typeColors = {
-  screenplay: "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300",
-  synopsis: "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300",
+const getTypeColors = (type: "screenplay" | "synopsis") => {
+  const typeStyles = {
+    screenplay: {
+      background: 'var(--primary)',
+      color: 'var(--primary-foreground)'
+    },
+    synopsis: {
+      background: 'var(--accent)',
+      color: 'var(--accent-foreground)'
+    }
+  }
+  return typeStyles[type]
 }
 
 interface StoryboardCardProps {
@@ -245,7 +254,7 @@ const StoryboardCard = ({
       {/* Reflective shine effect */}
       <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none transform -skew-x-12 translate-x-full group-hover:translate-x-[-200%] transition-transform duration-1000" />
       
-      <CardHeader className="pb-2 relative z-10">
+      <CardHeader className="relative z-10">
         <div className="flex items-start justify-between">
           <div className="flex-1 min-w-0">
             {/* Title */}
@@ -253,11 +262,31 @@ const StoryboardCard = ({
               {storyboard.title}
             </CardTitle>
             
-            {/* Type in capital letters */}
+            {/* Type in capital letters - Parallelogram Design */}
             <div className="mt-2">
-              <Badge className={cn("text-xs font-bold tracking-wide", typeColors[storyboard.type])}>
-                {storyboard.type.toUpperCase()}
-              </Badge>
+              <div 
+                className="relative cursor-pointer hover:scale-110 hover:shadow-lg transition-all duration-300 inline-block"
+                style={{
+                  background: getTypeColors(storyboard.type).background,
+                  color: getTypeColors(storyboard.type).color,
+                  transform: 'skew(-15deg)',
+                  transformOrigin: 'center',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+                  border: 'none',
+                  borderRadius: '0',
+                  padding: '2px 12px',
+                  fontSize: '10px',
+                  fontWeight: '600',
+                  letterSpacing: '0.05em'
+                }}
+              >
+                <span 
+                  className="inline-block"
+                  style={{ transform: 'skew(15deg)' }}
+                >
+                  {storyboard.type.toUpperCase()}
+                </span>
+              </div>
             </div>
           </div>
           <AlertDialog>
@@ -298,8 +327,19 @@ const StoryboardCard = ({
           <div className="flex gap-2 justify-center">
               {/* Scene Block */}
               <div className="flex flex-col items-center space-y-1">
-                <div className="w-12 h-12 rounded-md p-1 text-center border flex items-center justify-center" style={{ backgroundColor: 'hsl(var(--primary) / 0.1)', borderColor: 'hsl(var(--primary) / 0.2)' }}>
-                  <div className="text-sm font-bold" style={{ color: 'hsl(var(--primary))' }}>
+                <div 
+                  className="w-12 h-12 rounded-md p-1 text-center flex items-center justify-center relative overflow-hidden"
+                  style={{ 
+                    background: 'var(--accent)',
+                    border: '1px solid var(--accent)',
+                    boxShadow: `
+                      inset 2px 2px 4px color-mix(in oklch, var(--accent) 30%, transparent),
+                      inset -2px -2px 4px color-mix(in oklch, var(--accent) 10%, transparent),
+                      0 1px 2px color-mix(in oklch, var(--accent) 20%, transparent)
+                    `
+                  }}
+                >
+                  <div className="text-sm font-bold relative z-10" style={{ color: 'var(--accent-foreground)', textShadow: '0 1px 2px color-mix(in oklch, var(--accent) 30%, transparent)' }}>
                     {storyboard.sceneCount}
                   </div>
                 </div>
@@ -310,8 +350,19 @@ const StoryboardCard = ({
               
               {/* Subscene Block */}
               <div className="flex flex-col items-center space-y-1">
-                <div className="w-12 h-12 rounded-md p-1 text-center border flex items-center justify-center" style={{ backgroundColor: 'hsl(var(--accent) / 0.1)', borderColor: 'hsl(var(--accent) / 0.2)' }}>
-                  <div className="text-sm font-bold" style={{ color: 'hsl(var(--accent))' }}>
+                <div 
+                  className="w-12 h-12 rounded-md p-1 text-center flex items-center justify-center relative overflow-hidden"
+                  style={{ 
+                    background: 'var(--accent)',
+                    border: '1px solid var(--accent)',
+                    boxShadow: `
+                      inset 2px 2px 4px color-mix(in oklch, var(--accent) 30%, transparent),
+                      inset -2px -2px 4px color-mix(in oklch, var(--accent) 10%, transparent),
+                      0 1px 2px color-mix(in oklch, var(--accent) 20%, transparent)
+                    `
+                  }}
+                >
+                  <div className="text-sm font-bold relative z-10" style={{ color: 'var(--accent-foreground)', textShadow: '0 1px 2px color-mix(in oklch, var(--accent) 30%, transparent)' }}>
                     {storyboard.subsceneCount}
                   </div>
                 </div>
@@ -324,8 +375,19 @@ const StoryboardCard = ({
           <div className="flex gap-2 justify-center">
               {/* Pages Block */}
               <div className="flex flex-col items-center space-y-1">
-                <div className="w-12 h-12 rounded-md p-1 text-center border flex items-center justify-center" style={{ backgroundColor: 'hsl(var(--secondary) / 0.1)', borderColor: 'hsl(var(--secondary) / 0.2)' }}>
-                  <div className="text-sm font-bold" style={{ color: 'hsl(var(--secondary-foreground))' }}>
+                <div 
+                  className="w-12 h-12 rounded-md p-1 text-center flex items-center justify-center relative overflow-hidden"
+                  style={{ 
+                    background: 'var(--accent)',
+                    border: '1px solid var(--accent)',
+                    boxShadow: `
+                      inset 2px 2px 4px color-mix(in oklch, var(--accent) 30%, transparent),
+                      inset -2px -2px 4px color-mix(in oklch, var(--accent) 10%, transparent),
+                      0 1px 2px color-mix(in oklch, var(--accent) 20%, transparent)
+                    `
+                  }}
+                >
+                  <div className="text-sm font-bold relative z-10" style={{ color: 'var(--accent-foreground)', textShadow: '0 1px 2px color-mix(in oklch, var(--accent) 30%, transparent)' }}>
                     {storyboard.pages}
                   </div>
                 </div>

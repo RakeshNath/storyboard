@@ -10,6 +10,11 @@ export const metadata: Metadata = {
   title: "StoryBoard - Professional Storyboard Writing Portal",
   description: "A comprehensive web portal for storyboard writing with professional tools and themes",
   generator: "v0.app",
+  icons: {
+    icon: "/images/download-removebg-preview.png",
+    shortcut: "/images/download-removebg-preview.png",
+    apple: "/images/download-removebg-preview.png",
+  },
 }
 
 export default function RootLayout({

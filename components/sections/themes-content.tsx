@@ -6,6 +6,7 @@ import { useState, useEffect } from "react"
 import { Check } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { getUserTheme, updateUserTheme } from "@/lib/auth"
+import Image from "next/image"
 
 interface Theme {
   id: string
@@ -281,6 +282,20 @@ export function ThemesContent() {
   const [selectedTheme, setSelectedTheme] = useState("minimalist")
   const [previewTheme, setPreviewTheme] = useState<string | null>(null)
 
+  // Function to get theme-specific logo source
+  const getThemeLogo = (theme: Theme) => {
+    const themeLogos = {
+      professional: "/logos/logo-professional.png",
+      classic: "/logos/logo-classic.png", 
+      noir: "/logos/logo-filmnoir.png",
+      indie: "/logos/logo-indie.png",
+      minimalist: "/logos/logo-minimalist.png",
+      cyberpunk: "/logos/logo-cyberpunk.png"
+    }
+    
+    return themeLogos[theme.id as keyof typeof themeLogos] || "/logos/logo-minimalist.png"
+  }
+
   // Helper function to get button styling with good contrast
   const getButtonStyling = (theme: Theme, isSelected: boolean) => {
     if (isSelected) {
@@ -346,6 +361,11 @@ export function ThemesContent() {
     updateUserTheme(themeId)
     setSelectedTheme(themeId)
     setPreviewTheme(null)
+    
+    // Dispatch custom event for logo updates
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent('themeChanged', { detail: { theme: themeId } }))
+    }
   }
 
   const previewThemeColors = (themeId: string) => {
@@ -388,7 +408,7 @@ export function ThemesContent() {
               onMouseEnter={() => previewThemeColors(theme.id)}
               onMouseLeave={resetPreview}
             >
-              <CardHeader className="pb-1">
+              <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle 
                     className="text-sm"
@@ -411,6 +431,17 @@ export function ThemesContent() {
               </CardHeader>
 
               <CardContent className="space-y-2">
+                {/* Logo Preview Tile */}
+                <div className="flex justify-center mb-2">
+                  <Image
+                    src={getThemeLogo(theme)}
+                    alt={`${theme.name} Logo`}
+                    width={64}
+                    height={32}
+                    className="max-w-full h-auto transition-all duration-300"
+                  />
+                </div>
+
                 {/* Color Palette Preview - All colors in one row */}
                 <div>
                   <div className="flex gap-1 justify-center">

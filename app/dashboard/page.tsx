@@ -201,6 +201,11 @@ const applyUserTheme = (themeId: string) => {
   Object.entries(theme).forEach(([key, value]) => {
     root.style.setProperty(`--${key.replace(/([A-Z])/g, '-$1').toLowerCase()}`, value)
   })
+  
+  // Dispatch custom event for logo updates
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent('themeChanged', { detail: { theme: themeId } }))
+  }
 }
 
 export default function DashboardPage() {

@@ -10,6 +10,9 @@ import { ProfileContent } from "./sections/profile-content"
 import { ThemesContent } from "./sections/themes-content"
 import { StoryboardsContent } from "./sections/storyboards-content"
 import { PlaygroundContent } from "./sections/playground-content"
+import Image from "next/image"
+import { useState, useEffect } from "react"
+import { getUserTheme } from "@/lib/auth"
 
 interface NavigationItem {
   id: string
@@ -26,6 +29,53 @@ interface DashboardLayoutProps {
 }
 
 export function DashboardLayout({ user, navigationItems, activeSection, onSectionChange }: DashboardLayoutProps) {
+  const [currentTheme, setCurrentTheme] = useState<string>("minimalist")
+
+  useEffect(() => {
+    // Get the current theme
+    const theme = getUserTheme()
+    setCurrentTheme(theme)
+
+    // Listen for theme changes
+    const handleThemeChange = (event: CustomEvent) => {
+      setCurrentTheme(event.detail.theme)
+    }
+
+    window.addEventListener('themeChanged', handleThemeChange as EventListener)
+    
+    return () => {
+      window.removeEventListener('themeChanged', handleThemeChange as EventListener)
+    }
+  }, [])
+
+  // Function to get theme-specific logo source
+  const getThemeLogo = (theme: string) => {
+    const themeLogos = {
+      professional: "/logos/logo-professional.png",
+      classic: "/logos/logo-classic.png", 
+      noir: "/logos/logo-filmnoir.png",
+      indie: "/logos/logo-indie.png",
+      minimalist: "/logos/logo-minimalist.png",
+      cyberpunk: "/logos/logo-cyberpunk.png"
+    }
+    
+    return themeLogos[theme as keyof typeof themeLogos] || "/logos/logo-minimalist.png"
+  }
+
+  // Function to get theme border color
+  const getThemeBorderColor = (theme: string) => {
+    const borderColors = {
+      professional: "#3b82f6", // Professional blue
+      dark: "#6366f1", // Classic indigo
+      warm: "#f97316", // Film Noir orange
+      indie: "#a855f7", // Indie Spirit purple
+      minimalist: "#64748b", // Minimalist slate
+      cyberpunk: "#22c55e" // Cyberpunk green
+    }
+    
+    return borderColors[theme as keyof typeof borderColors] || "#3b82f6"
+  }
+
   const handleNavClick = (item: NavigationItem) => {
     if (item.action) {
       item.action()
@@ -88,14 +138,15 @@ export function DashboardLayout({ user, navigationItems, activeSection, onSectio
         {/* Left Pane */}
         <div className="w-64 bg-sidebar border-r border-sidebar-border flex flex-col">
           <div className="p-6 border-b border-sidebar-border">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-sidebar-primary/10 rounded-lg">
-                <Film className="h-6 w-6 text-sidebar-primary" />
-              </div>
-              <div>
-                <h1 className="text-xl font-bold text-sidebar-foreground">StoryBoard</h1>
-                <p className="text-xs text-sidebar-foreground/70">Storyboard Portal</p>
-              </div>
+            <div className="flex items-center justify-center">
+              <Image
+                src={getThemeLogo(currentTheme)}
+                alt="StoryBoard Logo"
+                width={140}
+                height={42}
+                className="max-w-full h-auto transition-all duration-300"
+                priority
+              />
             </div>
           </div>
 
