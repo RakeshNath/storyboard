@@ -291,12 +291,6 @@ export function ScreenplayEditor({ screenplayId, onBack }: ScreenplayEditorProps
               ← Back
             </Button>
             <div className="flex items-center gap-2">
-              <Input
-                value={scriptName}
-                onChange={(e) => setScriptName(e.target.value)}
-                className="text-xl font-bold border-none !bg-transparent p-0 h-auto"
-                placeholder="Screenplay Title"
-              />
               <div 
                 className="relative cursor-pointer hover:scale-110 hover:shadow-lg transition-all duration-300 inline-block"
                 style={{
@@ -320,6 +314,12 @@ export function ScreenplayEditor({ screenplayId, onBack }: ScreenplayEditorProps
                   SCREENPLAY
                 </span>
               </div>
+              <Input
+                value={scriptName}
+                onChange={(e) => setScriptName(e.target.value)}
+                className="text-xl font-bold border-none !bg-transparent p-0 h-auto"
+                placeholder="Screenplay Title"
+              />
             </div>
           </div>
           <div className="flex items-center gap-2">
