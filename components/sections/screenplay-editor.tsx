@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
@@ -37,14 +37,30 @@ export function ScreenplayEditor({ screenplayId, onBack }: ScreenplayEditorProps
       id: "1",
       number: "1",
       title: "Opening",
-      content: "FADE IN:\n\nEXT. CITY STREET - NIGHT\n\nThe city sleeps, but danger lurks in the shadows...",
+      content: JSON.stringify({
+        format: "",
+        location: "",
+        timeOfDay: "",
+        description: "",
+        actions: [],
+        dialogues: [],
+        transitions: []
+      }),
       characters: ["JOHN", "SARAH"]
     },
     {
       id: "2", 
       number: "2",
       title: "The Chase",
-      content: "The chase begins. John runs through the alley, Sarah close behind...",
+      content: JSON.stringify({
+        format: "",
+        location: "",
+        timeOfDay: "",
+        description: "",
+        actions: [],
+        dialogues: [],
+        transitions: []
+      }),
       characters: ["JOHN", "SARAH", "ANTAGONIST"]
     }
   ])
@@ -55,9 +71,38 @@ export function ScreenplayEditor({ screenplayId, onBack }: ScreenplayEditorProps
   const [actionContent, setActionContent] = useState("")
   const [actionItems, setActionItems] = useState<Array<{id: string, content: string}>>([])
   const [dialogueItems, setDialogueItems] = useState<Array<{id: string, character: string, dialogue: string}>>([])
+  const [transitionItems, setTransitionItems] = useState<Array<{id: string, content: string}>>([])
+  const [itemOrder, setItemOrder] = useState<Array<{type: 'action' | 'dialogue' | 'transition', id: string}>>([])
+  const [sceneFormat, setSceneFormat] = useState("")
+  const [sceneLocation, setSceneLocation] = useState("")
+  const [sceneTimeOfDay, setSceneTimeOfDay] = useState("")
+  const [sceneDescription, setSceneDescription] = useState("")
   const [showCharacterDropdown, setShowCharacterDropdown] = useState<string | null>(null)
   const [characterDropdownIndex, setCharacterDropdownIndex] = useState<{[key: string]: number}>({})
   const [isCharactersDialogOpen, setIsCharactersDialogOpen] = useState(false)
+  const [draggedItem, setDraggedItem] = useState<{type: 'action' | 'dialogue' | 'transition', id: string} | null>(null)
+  const [dragOverItem, setDragOverItem] = useState<{type: 'action' | 'dialogue' | 'transition', id: string} | null>(null)
+  
+  // Scene transition options
+  const transitionOptions = [
+    "FADE IN",
+    "FADE OUT", 
+    "FADE TO BLACK",
+    "CUT TO",
+    "DISSOLVE TO",
+    "WIPE TO",
+    "SMASH CUT TO",
+    "MATCH CUT TO",
+    "MONTAGE",
+    "INTERCUT WITH",
+    "BACK TO",
+    "CONTINUOUS",
+    "LATER",
+    "SAME TIME",
+    "SERIES OF SHOTS",
+    "END MONTAGE",
+    "END INTERCUT"
+  ]
   const [characterList, setCharacterList] = useState<Character[]>([
     { id: "1", name: "JOHN", description: "Protagonist - A determined detective" },
     { id: "2", name: "SARAH", description: "Supporting character - John's partner" },
@@ -65,12 +110,48 @@ export function ScreenplayEditor({ screenplayId, onBack }: ScreenplayEditorProps
     { id: "4", name: "DETECTIVE", description: "Secondary character - Police detective" }
   ])
 
+  // Load scene data when active scene changes
+  useEffect(() => {
+    const currentScene = scenes.find(s => s.id === activeScene)
+    if (currentScene) {
+      try {
+        const sceneData = JSON.parse(currentScene.content || '{}')
+        setSceneFormat(sceneData.format || "")
+        setSceneLocation(sceneData.location || "")
+        setSceneTimeOfDay(sceneData.timeOfDay || "")
+        setSceneDescription(sceneData.description || "")
+        setActionItems(sceneData.actions || [])
+        setDialogueItems(sceneData.dialogues || [])
+        setTransitionItems(sceneData.transitions || [])
+        setItemOrder(sceneData.itemOrder || [])
+      } catch (error) {
+        // Handle legacy scenes that might not have JSON content
+        setSceneFormat("")
+        setSceneLocation("")
+        setSceneTimeOfDay("")
+        setSceneDescription(currentScene.content || "")
+        setActionItems([])
+        setDialogueItems([])
+        setTransitionItems([])
+        setItemOrder([])
+      }
+    }
+  }, [activeScene, scenes])
+
   const addScene = () => {
     const newScene: Scene = {
       id: (scenes.length + 1).toString(),
       number: (scenes.length + 1).toString(),
-      title: "New Scene",
-      content: "",
+      title: "",
+      content: JSON.stringify({
+        format: "",
+        location: "",
+        timeOfDay: "",
+        description: "",
+        actions: [],
+        dialogues: [],
+        transitions: []
+      }),
       characters: []
     }
     setScenes([...scenes, newScene])
@@ -91,12 +172,44 @@ export function ScreenplayEditor({ screenplayId, onBack }: ScreenplayEditorProps
     ))
   }
 
+  const saveSceneData = () => {
+    const sceneData = {
+      format: sceneFormat,
+      location: sceneLocation,
+      timeOfDay: sceneTimeOfDay,
+      description: sceneDescription,
+      actions: actionItems,
+      dialogues: dialogueItems,
+      transitions: transitionItems,
+      itemOrder: itemOrder
+    }
+    const newContent = JSON.stringify(sceneData)
+    
+    // Only update if content has actually changed
+    const currentScene = scenes.find(s => s.id === activeScene)
+    if (currentScene && currentScene.content !== newContent) {
+      updateScene(activeScene, 'content', newContent)
+    }
+  }
+
+  // Auto-save when scene data changes (debounced)
+  useEffect(() => {
+    if (activeScene) {
+      const timeoutId = setTimeout(() => {
+        saveSceneData()
+      }, 500) // 500ms debounce
+      
+      return () => clearTimeout(timeoutId)
+    }
+  }, [sceneFormat, sceneLocation, sceneTimeOfDay, sceneDescription, actionItems, dialogueItems, transitionItems, itemOrder])
+
   const addActionItem = () => {
     const newAction = {
       id: Date.now().toString(),
       content: "Enter action description..."
     }
     setActionItems([...actionItems, newAction])
+    setItemOrder([...itemOrder, { type: 'action', id: newAction.id }])
   }
 
   const updateActionItem = (id: string, content: string) => {
@@ -107,6 +220,7 @@ export function ScreenplayEditor({ screenplayId, onBack }: ScreenplayEditorProps
 
   const deleteActionItem = (id: string) => {
     setActionItems(actionItems.filter(item => item.id !== id))
+    setItemOrder(itemOrder.filter(item => !(item.type === 'action' && item.id === id)))
   }
 
   const moveActionItem = (fromIndex: number, toIndex: number) => {
@@ -123,6 +237,16 @@ export function ScreenplayEditor({ screenplayId, onBack }: ScreenplayEditorProps
       dialogue: ""
     }
     setDialogueItems([...dialogueItems, newDialogue])
+    setItemOrder([...itemOrder, { type: 'dialogue', id: newDialogue.id }])
+  }
+
+  const addTransitionItem = () => {
+    const newTransition = {
+      id: Date.now().toString(),
+      content: "CUT TO"
+    }
+    setTransitionItems([...transitionItems, newTransition])
+    // Transitions are not added to itemOrder since they always appear at the end
   }
 
   const updateDialogueItem = (id: string, field: 'character' | 'dialogue', value: string) => {
@@ -133,6 +257,68 @@ export function ScreenplayEditor({ screenplayId, onBack }: ScreenplayEditorProps
 
   const deleteDialogueItem = (id: string) => {
     setDialogueItems(dialogueItems.filter(item => item.id !== id))
+    setItemOrder(itemOrder.filter(item => !(item.type === 'dialogue' && item.id === id)))
+  }
+
+  const updateTransitionItem = (id: string, content: string) => {
+    setTransitionItems(transitionItems.map(item => 
+      item.id === id ? { ...item, content } : item
+    ))
+  }
+
+  const deleteTransitionItem = (id: string) => {
+    setTransitionItems(transitionItems.filter(item => item.id !== id))
+    // Transitions are not in itemOrder, so no need to remove from it
+  }
+
+  // Drag and Drop Functions (transitions cannot be reordered)
+  const handleDragStart = (type: 'action' | 'dialogue' | 'transition', id: string) => {
+    // Prevent transitions from being dragged
+    if (type === 'transition') {
+      return
+    }
+    setDraggedItem({ type, id })
+  }
+
+  const handleDragOver = (e: React.DragEvent, type: 'action' | 'dialogue' | 'transition', id: string) => {
+    // Prevent dropping on transitions
+    if (type === 'transition') {
+      return
+    }
+    e.preventDefault()
+    setDragOverItem({ type, id })
+  }
+
+  const handleDragLeave = () => {
+    setDragOverItem(null)
+  }
+
+  const handleDrop = (type: 'action' | 'dialogue' | 'transition', targetId: string) => {
+    // Prevent dropping on transitions
+    if (type === 'transition') {
+      setDraggedItem(null)
+      setDragOverItem(null)
+      return
+    }
+    
+    if (!draggedItem) {
+      setDraggedItem(null)
+      setDragOverItem(null)
+      return
+    }
+
+    const draggedOrderIndex = itemOrder.findIndex(item => item.type === draggedItem.type && item.id === draggedItem.id)
+    const targetOrderIndex = itemOrder.findIndex(item => item.type === type && item.id === targetId)
+    
+    if (draggedOrderIndex !== -1 && targetOrderIndex !== -1 && draggedOrderIndex !== targetOrderIndex) {
+      const newOrder = [...itemOrder]
+      const [movedItem] = newOrder.splice(draggedOrderIndex, 1)
+      newOrder.splice(targetOrderIndex, 0, movedItem)
+      setItemOrder(newOrder)
+    }
+
+    setDraggedItem(null)
+    setDragOverItem(null)
   }
 
   const moveDialogueItem = (fromIndex: number, toIndex: number) => {
@@ -140,6 +326,32 @@ export function ScreenplayEditor({ screenplayId, onBack }: ScreenplayEditorProps
     const [movedItem] = newItems.splice(fromIndex, 1)
     newItems.splice(toIndex, 0, movedItem)
     setDialogueItems(newItems)
+  }
+
+  // Helper function to get items in order (transitions always at end)
+  const getOrderedItems = () => {
+    // Get non-transition items in order
+    const nonTransitionItems = itemOrder
+      .filter(orderItem => orderItem.type !== 'transition')
+      .map(orderItem => {
+        if (orderItem.type === 'action') {
+          const action = actionItems.find(item => item.id === orderItem.id)
+          return action ? { ...action, type: 'action' as const } : null
+        } else if (orderItem.type === 'dialogue') {
+          const dialogue = dialogueItems.find(item => item.id === orderItem.id)
+          return dialogue ? { ...dialogue, type: 'dialogue' as const } : null
+        }
+        return null
+      }).filter((item): item is NonNullable<typeof item> => item !== null)
+    
+    // Get all transition items (always at the end)
+    const transitionItems_ordered = transitionItems.map(transition => ({ 
+      ...transition, 
+      type: 'transition' as const 
+    }))
+    
+    // Combine: non-transitions first, then transitions
+    return [...nonTransitionItems, ...transitionItems_ordered]
   }
 
   const handleCharacterInput = (dialogueId: string, value: string) => {
@@ -270,13 +482,38 @@ export function ScreenplayEditor({ screenplayId, onBack }: ScreenplayEditorProps
   }
 
   const getCharacterUsageCount = (characterName: string) => {
-    return dialogueItems.filter(item => item.character === characterName).length
+    // Count dialogues across all scenes
+    let totalDialogueCount = 0
+    scenes.forEach(scene => {
+      try {
+        const sceneData = JSON.parse(scene.content || '{}')
+        if (sceneData.dialogues) {
+          totalDialogueCount += sceneData.dialogues.filter((item: any) => item.character === characterName).length
+        }
+      } catch (error) {
+        // Handle legacy scenes or parsing errors
+      }
+    })
+    return totalDialogueCount
   }
 
   const getCharacterSceneCount = (characterName: string) => {
-    // Check if character has dialogue in the current active scene
-    const hasDialogueInCurrentScene = dialogueItems.some(item => item.character === characterName)
-    return hasDialogueInCurrentScene ? 1 : 0
+    // Count scenes where character has dialogue across all scenes
+    let sceneCount = 0
+    scenes.forEach(scene => {
+      try {
+        const sceneData = JSON.parse(scene.content || '{}')
+        if (sceneData.dialogues) {
+          const hasDialogueInScene = sceneData.dialogues.some((item: any) => item.character === characterName)
+          if (hasDialogueInScene) {
+            sceneCount++
+          }
+        }
+      } catch (error) {
+        // Handle legacy scenes or parsing errors
+      }
+    })
+    return sceneCount
   }
 
   const currentScene = scenes.find(s => s.id === activeScene)
@@ -566,20 +803,30 @@ export function ScreenplayEditor({ screenplayId, onBack }: ScreenplayEditorProps
               <div className="flex-1 p-4 space-y-4">
                 {/* Scene Format Dropdowns */}
                 <div className="flex gap-4 items-center justify-center">
-                  <select className="px-4 py-2 border rounded text-sm bg-transparent font-medium">
-                    <option value="">FORMAT</option>
+                  <select 
+                    value={sceneFormat}
+                    onChange={(e) => setSceneFormat(e.target.value)}
+                    className={`px-4 py-2 border rounded text-sm bg-transparent font-medium ${!sceneFormat ? 'border-red-500' : ''}`}
+                  >
+                    <option value="">FORMAT *</option>
                     <option value="ext">EXT</option>
                     <option value="int">INT</option>
                   </select>
                   
                   <input 
                     type="text" 
-                    placeholder="LOCATION"
-                    className="px-4 py-2 border rounded text-sm bg-transparent font-medium w-40"
+                    value={sceneLocation}
+                    onChange={(e) => setSceneLocation(e.target.value)}
+                    placeholder="LOCATION *"
+                    className={`px-4 py-2 border rounded text-sm bg-transparent font-medium w-40 ${!sceneLocation ? 'border-red-500' : ''}`}
                   />
                   
-                  <select className="px-4 py-2 border rounded text-sm bg-transparent font-medium">
-                    <option value="">TIME OF SCENE</option>
+                  <select 
+                    value={sceneTimeOfDay}
+                    onChange={(e) => setSceneTimeOfDay(e.target.value)}
+                    className={`px-4 py-2 border rounded text-sm bg-transparent font-medium ${!sceneTimeOfDay ? 'border-red-500' : ''}`}
+                  >
+                    <option value="">TIME OF SCENE *</option>
                     <option value="day">DAY</option>
                     <option value="night">NIGHT</option>
                     <option value="dawn">DAWN</option>
@@ -592,112 +839,154 @@ export function ScreenplayEditor({ screenplayId, onBack }: ScreenplayEditorProps
                 <div className="flex justify-center">
                   <input 
                     type="text" 
+                    value={sceneDescription}
+                    onChange={(e) => setSceneDescription(e.target.value)}
                     placeholder="Scene description..."
-                    className="px-4 py-2 border rounded text-sm bg-transparent font-medium w-full max-w-2xl"
+                    className="px-4 py-2 border rounded text-sm bg-transparent font-medium w-full max-w-4xl transition-none focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    style={{ 
+                      minHeight: '40px',
+                      lineHeight: '1.5'
+                    }}
                   />
                 </div>
 
-                {/* Action Items */}
-                {actionItems.map((actionItem, index) => (
-                  <div key={actionItem.id} className="flex justify-center gap-2">
-                    <div className="flex items-center gap-2 w-full max-w-2xl">
-                      {/* Drag Handle */}
-                      <div className="cursor-move text-muted-foreground hover:text-foreground">
-                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                          <path d="M7 2a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM7 8a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM7 14a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM13 2a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM13 8a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM13 14a2 2 0 1 0 0 4 2 2 0 0 0 0-4z"/>
-                        </svg>
-                      </div>
+                {/* Ordered Items (Actions, Dialogues, Transitions) */}
+                {getOrderedItems().map((item, index) => (
+                  <div 
+                    key={item.id} 
+                    className={`flex justify-center gap-2 ${draggedItem?.id === item.id ? 'opacity-50' : ''} ${dragOverItem?.id === item.id && dragOverItem?.type === item.type ? 'border-t-2 border-primary' : ''}`}
+                    draggable={item.type !== 'transition'}
+                    onDragStart={() => handleDragStart(item.type, item.id)}
+                    onDragOver={(e) => handleDragOver(e, item.type, item.id)}
+                    onDragLeave={handleDragLeave}
+                    onDrop={(e) => handleDrop(item.type, item.id)}
+                  >
+                    <div className="flex items-center gap-2 w-full max-w-4xl">
+                      {/* Drag Handle - Only for actions and dialogues */}
+                      {item.type !== 'transition' && (
+                        <div className="cursor-move text-muted-foreground hover:text-foreground">
+                          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M7 2a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM7 8a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM7 14a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM13 2a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM13 8a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM13 14a2 2 0 1 0 0 4 2 2 0 0 0 0-4z"/>
+                          </svg>
+                        </div>
+                      )}
                       
-                      {/* Action Input */}
-                      <input
-                        value={actionItem.content}
-                        onChange={(e) => updateActionItem(actionItem.id, e.target.value)}
-                        placeholder="Enter action description..."
-                        className="flex-1 px-4 py-2 border rounded text-sm bg-transparent font-medium"
-                      />
+                      {/* Render based on item type */}
+                      {item.type === 'action' && 'content' in item && (
+                        <>
+                          {/* Action Input */}
+                          <input
+                            value={item.content}
+                            onChange={(e) => updateActionItem(item.id, e.target.value)}
+                            placeholder="Enter action description..."
+                            className="flex-1 px-4 py-2 border rounded text-sm bg-transparent font-medium"
+                          />
+                          
+                          {/* Delete Button */}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => deleteActionItem(item.id)}
+                            className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </>
+                      )}
                       
-                      {/* Delete Button */}
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => deleteActionItem(actionItem.id)}
-                        className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      {item.type === 'dialogue' && 'character' in item && 'dialogue' in item && (
+                        <>
+                          {/* Character Name Input */}
+                          <div className="relative">
+                            <input
+                              value={item.character}
+                              onChange={(e) => handleCharacterInput(item.id, e.target.value)}
+                              onFocus={() => setShowCharacterDropdown(item.id)}
+                              onBlur={() => {
+                                setTimeout(() => setShowCharacterDropdown(null), 200)
+                                handleCharacterBlur(item.id, item.character)
+                              }}
+                              onKeyDown={(e) => handleCharacterKeyDown(item.id, e)}
+                              placeholder="type character name"
+                              className="w-24 px-2 py-2 border rounded text-sm bg-transparent font-medium"
+                            />
+                            
+                            {/* Character Dropdown */}
+                            {showCharacterDropdown === item.id && (
+                              <div className="absolute top-full left-0 mt-1 w-32 bg-background border rounded-lg shadow-lg z-10 max-h-32 overflow-y-auto">
+                                {getFilteredCharacters(item.character).length > 0 ? (
+                                  getFilteredCharacters(item.character).map((character, index) => (
+                                    <button
+                                      key={character}
+                                      onClick={() => selectCharacter(item.id, character)}
+                                      className={`w-full px-2 py-1 text-left text-xs first:rounded-t-lg last:rounded-b-lg ${
+                                        index === (characterDropdownIndex[item.id] || -1)
+                                          ? 'bg-primary text-primary-foreground'
+                                          : 'hover:bg-muted/50'
+                                      }`}
+                                    >
+                                      {character}
+                                    </button>
+                                  ))
+                                ) : (
+                                  <div className="px-2 py-1 text-xs text-muted-foreground">
+                                    No characters found
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                          
+                          {/* Dialogue Input */}
+                          <input
+                            value={item.dialogue}
+                            onChange={(e) => updateDialogueItem(item.id, 'dialogue', e.target.value)}
+                            placeholder="Enter dialogue..."
+                            className="flex-1 px-4 py-2 border rounded text-sm bg-transparent font-medium"
+                          />
+                          
+                          {/* Delete Button */}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => deleteDialogueItem(item.id)}
+                            className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </>
+                      )}
+                      
+                      {item.type === 'transition' && 'content' in item && (
+                        <>
+                          {/* Transition Dropdown */}
+                          <select
+                            value={item.content}
+                            onChange={(e) => updateTransitionItem(item.id, e.target.value)}
+                            className="flex-1 px-4 py-2 border rounded text-sm bg-transparent font-medium"
+                          >
+                            {transitionOptions.map((option) => (
+                              <option key={option} value={option}>
+                                {option}
+                              </option>
+                            ))}
+                          </select>
+                          
+                          {/* Delete Button */}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => deleteTransitionItem(item.id)}
+                            className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </>
+                      )}
                     </div>
                   </div>
                 ))}
 
-                {/* Dialogue Items */}
-                {dialogueItems.map((dialogueItem, index) => (
-                  <div key={dialogueItem.id} className="flex justify-center gap-2">
-                    <div className="flex items-center gap-2 w-full max-w-2xl">
-                      {/* Drag Handle */}
-                      <div className="cursor-move text-muted-foreground hover:text-foreground">
-                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                          <path d="M7 2a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM7 8a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM7 14a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM13 2a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM13 8a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM13 14a2 2 0 1 0 0 4 2 2 0 0 0 0-4z"/>
-                        </svg>
-                      </div>
-                      
-                      {/* Character Name Input */}
-                      <div className="relative">
-                        <input
-                          value={dialogueItem.character}
-                          onChange={(e) => handleCharacterInput(dialogueItem.id, e.target.value)}
-                          onFocus={() => setShowCharacterDropdown(dialogueItem.id)}
-                          onBlur={() => {
-                            setTimeout(() => setShowCharacterDropdown(null), 200)
-                            handleCharacterBlur(dialogueItem.id, dialogueItem.character)
-                          }}
-                          onKeyDown={(e) => handleCharacterKeyDown(dialogueItem.id, e)}
-                          placeholder="Character"
-                          className="w-24 px-4 py-2 border rounded text-sm bg-transparent font-medium text-center"
-                        />
-                        {/* Character Dropdown */}
-                        {showCharacterDropdown === dialogueItem.id && (
-                          <div className="absolute top-full left-0 mt-1 w-32 bg-transparent border rounded-lg shadow-lg z-10">
-                            {getFilteredCharacters(dialogueItem.character).length > 0 ? getFilteredCharacters(dialogueItem.character).map((character, index) => (
-                              <button
-                                key={character}
-                                onClick={() => selectCharacter(dialogueItem.id, character)}
-                                className={`w-full px-3 py-2 text-left text-sm first:rounded-t-lg last:rounded-b-lg ${
-                                  index === (characterDropdownIndex[dialogueItem.id] || -1)
-                                    ? 'bg-primary text-primary-foreground'
-                                    : 'hover:bg-muted/50'
-                                }`}
-                              >
-                                {character}
-                              </button>
-                            )) : (
-                              <div className="px-3 py-2 text-sm text-muted-foreground">
-                                No characters found
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                      
-                      {/* Dialogue Input */}
-                      <input
-                        value={dialogueItem.dialogue}
-                        onChange={(e) => updateDialogueItem(dialogueItem.id, 'dialogue', e.target.value)}
-                        placeholder="Enter dialogue..."
-                        className="flex-1 px-4 py-2 border rounded text-sm bg-transparent font-medium"
-                      />
-                      
-                      {/* Delete Button */}
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => deleteDialogueItem(dialogueItem.id)}
-                        className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
 
                 {/* Action Buttons */}
                 <div className="flex gap-3 justify-center">
@@ -726,9 +1015,13 @@ export function ScreenplayEditor({ screenplayId, onBack }: ScreenplayEditorProps
                   <Button 
                     variant="outline" 
                     size="sm"
+                    onClick={addTransitionItem}
+                    disabled={transitionItems.length > 0}
                     style={{
-                      borderColor: 'var(--primary)',
-                      color: 'var(--primary)'
+                      borderColor: transitionItems.length > 0 ? 'var(--muted-foreground)' : 'var(--primary)',
+                      color: transitionItems.length > 0 ? 'var(--muted-foreground)' : 'var(--primary)',
+                      opacity: transitionItems.length > 0 ? 0.5 : 1,
+                      cursor: transitionItems.length > 0 ? 'not-allowed' : 'pointer'
                     }}
                   >
                     Add Transition
