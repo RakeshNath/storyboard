@@ -5,10 +5,11 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Plus, Edit3, Trash2, Users, FileText } from "lucide-react"
+import { Plus, Edit3, Trash2, Users, FileText, HelpCircle } from "lucide-react"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { cn } from "@/lib/utils"
 
 interface Scene {
@@ -799,8 +800,30 @@ export function ScreenplayEditor({ screenplayId, onBack }: ScreenplayEditorProps
                   />
                 </div>
               </div>
-              
-              <div className="flex-1 p-4 space-y-4">
+
+              {/* Tabs Container */}
+              <Tabs defaultValue="script" className="flex-1 flex flex-col">
+                <div className="relative border-b">
+                  <TabsList className="relative bg-transparent h-10 p-0 border-0 grid-cols-2">
+                    <TabsTrigger 
+                      value="script" 
+                      className="relative bg-muted/50 border border-b-0 border-border rounded-t-lg rounded-b-none px-4 py-2 data-[state=active]:bg-background data-[state=active]:border-b-background data-[state=active]:z-10 data-[state=active]:shadow-none"
+                    >
+                      <FileText className="h-4 w-4 mr-2" />
+                      Script
+                    </TabsTrigger>
+                    <TabsTrigger 
+                      value="help"
+                      className="relative bg-muted/50 border border-b-0 border-border rounded-t-lg rounded-b-none px-4 py-2 data-[state=active]:bg-background data-[state=active]:border-b-background data-[state=active]:z-10 data-[state=active]:shadow-none"
+                    >
+                      <HelpCircle className="h-4 w-4 mr-2" />
+                      Help
+                    </TabsTrigger>
+                  </TabsList>
+                </div>
+                
+                <TabsContent value="script" className="flex-1 border border-t-0 rounded-t-none rounded-lg bg-background p-4 m-0">
+                  <div className="space-y-4">
                 {/* Scene Format Dropdowns */}
                 <div className="flex gap-4 items-center justify-center">
                   <select 
@@ -1034,7 +1057,174 @@ export function ScreenplayEditor({ screenplayId, onBack }: ScreenplayEditorProps
                     <p>Scene content will appear here as you add actions, dialogue, and transitions...</p>
                   </div>
                 </div>
-              </div>
+                  </div>
+                </TabsContent>
+                
+                <TabsContent value="help" className="flex-1 border border-t-0 rounded-t-none rounded-lg bg-background p-6 m-0">
+                  <div className="h-full overflow-y-auto">
+                    <div className="max-w-4xl mx-auto space-y-6">
+                      <div className="text-center mb-8">
+                        <HelpCircle className="h-12 w-12 text-primary mx-auto mb-4" />
+                        <h1 className="text-3xl font-bold mb-2">Screenplay Writing Guide</h1>
+                        <p className="text-muted-foreground text-lg">Learn how to write professional screenplays using this editor</p>
+                      </div>
+
+                      {/* Getting Started */}
+                      <div className="space-y-4">
+                        <h2 className="text-2xl font-semibold flex items-center gap-2">
+                          <span className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold">1</span>
+                          Getting Started
+                        </h2>
+                        <div className="bg-muted/50 p-4 rounded-lg">
+                          <p className="text-sm text-muted-foreground mb-2">
+                            Select a scene from the left panel to start writing. Each scene requires FORMAT, LOCATION, and TIME OF DAY to be set.
+                          </p>
+                          <div className="bg-background p-3 rounded border-l-4 border-primary">
+                            <p className="text-sm"><strong>Tip:</strong> Use the drag handles to reorder actions and dialogues within a scene.</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Scene Structure */}
+                      <div className="space-y-4">
+                        <h2 className="text-2xl font-semibold flex items-center gap-2">
+                          <span className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold">2</span>
+                          Scene Structure
+                        </h2>
+                        <div className="grid md:grid-cols-3 gap-4">
+                          <div className="space-y-2">
+                            <h3 className="font-medium">Format</h3>
+                            <ul className="text-sm space-y-1 text-muted-foreground">
+                              <li>• <strong>EXT</strong> - Exterior scenes</li>
+                              <li>• <strong>INT</strong> - Interior scenes</li>
+                            </ul>
+                          </div>
+                          <div className="space-y-2">
+                            <h3 className="font-medium">Location</h3>
+                            <ul className="text-sm space-y-1 text-muted-foreground">
+                              <li>• Be specific and descriptive</li>
+                              <li>• Use proper names when possible</li>
+                              <li>• Keep it concise</li>
+                            </ul>
+                          </div>
+                          <div className="space-y-2">
+                            <h3 className="font-medium">Time of Day</h3>
+                            <ul className="text-sm space-y-1 text-muted-foreground">
+                              <li>• DAY, NIGHT, DAWN, DUSK</li>
+                              <li>• CONTINUOUS for same time</li>
+                            </ul>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Content Types */}
+                      <div className="space-y-4">
+                        <h2 className="text-2xl font-semibold flex items-center gap-2">
+                          <span className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold">3</span>
+                          Content Types
+                        </h2>
+                        <div className="grid md:grid-cols-3 gap-4">
+                          <div className="bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 p-4 rounded-lg">
+                            <h3 className="font-medium text-green-800 dark:text-green-200 mb-2">Actions</h3>
+                            <ul className="text-sm text-green-700 dark:text-green-300 space-y-1">
+                              <li>• Describe what happens visually</li>
+                              <li>• Use present tense</li>
+                              <li>• Be concise and clear</li>
+                              <li>• Focus on what can be seen</li>
+                            </ul>
+                          </div>
+                          <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 p-4 rounded-lg">
+                            <h3 className="font-medium text-blue-800 dark:text-blue-200 mb-2">Dialogue</h3>
+                            <ul className="text-sm text-blue-700 dark:text-blue-300 space-y-1">
+                              <li>• Type @ to autocomplete characters</li>
+                              <li>• Use character names in CAPS</li>
+                              <li>• Keep dialogue natural</li>
+                              <li>• Show, don't tell</li>
+                            </ul>
+                          </div>
+                          <div className="bg-purple-50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-800 p-4 rounded-lg">
+                            <h3 className="font-medium text-purple-800 dark:text-purple-200 mb-2">Transitions</h3>
+                            <ul className="text-sm text-purple-700 dark:text-purple-300 space-y-1">
+                              <li>• Only one per scene</li>
+                              <li>• Common: CUT TO, FADE IN, etc.</li>
+                              <li>• Use sparingly</li>
+                              <li>• Always at scene end</li>
+                            </ul>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Character Management */}
+                      <div className="space-y-4">
+                        <h2 className="text-2xl font-semibold flex items-center gap-2">
+                          <span className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold">4</span>
+                          Character Management
+                        </h2>
+                        <div className="bg-muted/50 p-4 rounded-lg">
+                          <p className="text-sm text-muted-foreground mb-2">
+                            Use the "Characters" button in the header to manage your character list. Characters are automatically added when you type new names in dialogue.
+                          </p>
+                          <div className="grid md:grid-cols-2 gap-4 mt-4">
+                            <div>
+                              <h4 className="font-medium mb-2">Character Features</h4>
+                              <ul className="text-sm space-y-1 text-muted-foreground">
+                                <li>• Auto-complete with @ symbol</li>
+                                <li>• Usage counters for dialogue and scenes</li>
+                                <li>• Cannot delete active characters</li>
+                                <li>• Editable descriptions</li>
+                              </ul>
+                            </div>
+                            <div>
+                              <h4 className="font-medium mb-2">Best Practices</h4>
+                              <ul className="text-sm space-y-1 text-muted-foreground">
+                                <li>• Use consistent character names</li>
+                                <li>• Keep names in ALL CAPS</li>
+                                <li>• Add descriptions for clarity</li>
+                                <li>• Remove unused characters</li>
+                              </ul>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Formatting Tips */}
+                      <div className="space-y-4">
+                        <h2 className="text-2xl font-semibold flex items-center gap-2">
+                          <span className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold">5</span>
+                          Formatting Tips
+                        </h2>
+                        <div className="grid md:grid-cols-2 gap-4">
+                          <div className="bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-800 p-4 rounded-lg">
+                            <h3 className="font-medium text-yellow-800 dark:text-yellow-200 mb-2">Screenplay Format</h3>
+                            <ul className="text-sm text-yellow-700 dark:text-yellow-300 space-y-1">
+                              <li>• 12pt Courier font (industry standard)</li>
+                              <li>• 1 inch margins all around</li>
+                              <li>• Scene headings in CAPS</li>
+                              <li>• Character names in CAPS</li>
+                            </ul>
+                          </div>
+                          <div className="bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-800 p-4 rounded-lg">
+                            <h3 className="font-medium text-orange-800 dark:text-orange-200 mb-2">Writing Style</h3>
+                            <ul className="text-sm text-orange-700 dark:text-orange-300 space-y-1">
+                              <li>• Present tense for actions</li>
+                              <li>• Active voice preferred</li>
+                              <li>• Avoid camera directions</li>
+                              <li>• Show character emotions</li>
+                            </ul>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Footer */}
+                      <div className="text-center pt-8 border-t">
+                        <p className="text-sm text-muted-foreground">
+                          Need more help? The editor auto-saves your work as you type, and you can always drag and drop to reorder content.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </TabsContent>
+              </Tabs>
             </>
           ) : (
             <div className="flex-1 flex items-center justify-center">

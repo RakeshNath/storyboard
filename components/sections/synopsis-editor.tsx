@@ -4,7 +4,8 @@ import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { ArrowLeft, Save, FileText, Hash, Bold, Italic, Underline, AlignLeft, AlignCenter, AlignRight, Palette, Heading1, Heading2, Heading3, List, ListOrdered, Quote, Code, Minus, Strikethrough, Type, Highlighter, MoreHorizontal } from "lucide-react"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { ArrowLeft, Save, FileText, Hash, Bold, Italic, Underline, AlignLeft, AlignCenter, AlignRight, Palette, Heading1, Heading2, Heading3, List, ListOrdered, Quote, Code, Minus, Strikethrough, Type, Highlighter, HelpCircle } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
@@ -141,9 +142,9 @@ export function SynopsisEditor({ synopsisId, synopsisTitle, onBack }: SynopsisEd
 
   // Update editor content when synopsisContent changes (only from localStorage)
   useEffect(() => {
-    if (editor && synopsisContent && synopsisContent !== editor.getText()) {
-      editor.commands.setContent(synopsisContent, false)
-    }
+      if (editor && synopsisContent && synopsisContent !== editor.getText()) {
+        editor.commands.setContent(synopsisContent)
+      }
   }, [editor]) // Only run when editor is ready
 
   // Auto-save when content changes (debounced)
@@ -167,7 +168,7 @@ export function SynopsisEditor({ synopsisId, synopsisTitle, onBack }: SynopsisEd
   return (
     <div className="h-full flex flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b bg-background">
+      <div className="flex items-center justify-between p-4 bg-background">
         <div className="flex items-center gap-4">
           <Button
             variant="ghost"
@@ -226,25 +227,39 @@ export function SynopsisEditor({ synopsisId, synopsisTitle, onBack }: SynopsisEd
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="flex-1 p-4">
-        <Card className="h-full">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <FileText className="h-5 w-5" />
-              Synopsis Content
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="h-full pb-6 relative">
-            {/* Plain Text Counters */}
-            <div className="flex justify-end gap-4 mb-2 text-sm text-muted-foreground">
-              <span>{wordCount} words</span>
-              <span>{characterCount} characters</span>
-            </div>
+      {/* Main Content with Tabs */}
+      <div className="flex-1">
+        <Tabs defaultValue="synopsis" className="h-full flex flex-col" data-testid="synopsis-tabs">
+              <div className="relative border-b" data-testid="tabs-container">
+                <TabsList className="relative bg-transparent h-10 p-0 border-0 grid-cols-2" data-testid="tabs-list">
+                  <TabsTrigger 
+                    value="synopsis" 
+                    className="relative bg-muted/50 border border-b-0 border-border rounded-t-lg rounded-b-none px-4 py-2 data-[state=active]:bg-background data-[state=active]:border-b-background data-[state=active]:z-10 data-[state=active]:shadow-none"
+                    data-testid="synopsis-tab"
+                  >
+                    Synopsis
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="help"
+                    className="relative bg-muted/50 border border-b-0 border-border rounded-t-lg rounded-b-none px-4 py-2 data-[state=active]:bg-background data-[state=active]:border-b-background data-[state=active]:z-10 data-[state=active]:shadow-none"
+                    data-testid="help-tab"
+                  >
+                    <HelpCircle className="h-4 w-4 mr-2" />
+                    Help
+                  </TabsTrigger>
+                </TabsList>
+              </div>
+              
+              <TabsContent value="synopsis" className="flex-1 border border-t-0 rounded-t-none rounded-lg bg-background p-4" data-testid="synopsis-content">
+                {/* Plain Text Counters */}
+                <div className="flex justify-end gap-4 mb-2 text-sm text-muted-foreground" data-testid="word-character-counters">
+                  <span data-testid="word-count">{wordCount} words</span>
+                  <span data-testid="character-count">{characterCount} characters</span>
+                </div>
             
             {/* Rich Text Editor Toolbar */}
             {editor && (
-              <div className="flex flex-wrap items-center gap-1 p-2 border-b bg-muted/20 rounded-t-lg">
+              <div className="flex flex-wrap items-center gap-1 p-2 border-b bg-muted/20 rounded-t-lg" data-testid="rich-text-toolbar">
                 {/* Headings */}
                 <Button
                   variant="ghost"
@@ -427,6 +442,7 @@ export function SynopsisEditor({ synopsisId, synopsisTitle, onBack }: SynopsisEd
             {/* Rich Text Editor */}
             <div 
               className="h-full min-h-[600px] border border-t-0 rounded-b-lg focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2"
+              data-testid="rich-text-editor-container"
               style={{
                 backgroundImage: pageCount > 1 ? `repeating-linear-gradient(
                   transparent,
@@ -437,31 +453,278 @@ export function SynopsisEditor({ synopsisId, synopsisTitle, onBack }: SynopsisEd
               }}
             >
               {editor ? (
-                <EditorContent editor={editor} />
+                <EditorContent editor={editor} data-testid="editor-content" />
               ) : (
-                <div className="p-4 text-muted-foreground">
+                <div className="p-4 text-muted-foreground" data-testid="editor-loading">
                   Loading editor...
                 </div>
               )}
             </div>
             
-            {/* Page Break Indicators */}
-            {pageCount > 1 && (
-              <div className="absolute top-4 right-4 flex flex-col gap-1 z-10">
-                {Array.from({ length: pageCount }, (_, i) => (
-                  <Badge 
-                    key={i} 
-                    variant="destructive" 
-                    className="text-xs px-2 py-1"
-                  >
-                    Page {i + 1}
-                  </Badge>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+                {/* Page Break Indicators */}
+                {pageCount > 1 && (
+                  <div className="absolute top-4 right-4 flex flex-col gap-1 z-10" data-testid="page-break-indicators">
+                    {Array.from({ length: pageCount }, (_, i) => (
+                      <div 
+                        key={i}
+                        className="text-xs px-2 py-1 rounded-md font-medium"
+                        data-testid={`page-indicator-${i + 1}`}
+                        style={{
+                          backgroundColor: 'var(--accent)',
+                          color: 'var(--accent-foreground)',
+                          border: '1px solid var(--accent)'
+                        }}
+                      >
+                        Page {i + 1}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </TabsContent>
+              
+              <TabsContent value="help" className="flex-1 border border-t-0 rounded-t-none rounded-lg bg-background p-6" data-testid="help-content">
+                <div className="h-full overflow-y-auto" data-testid="help-container">
+                  <div className="max-w-4xl mx-auto space-y-6">
+                    <div className="text-center mb-8">
+                      <HelpCircle className="h-12 w-12 text-primary mx-auto mb-4" />
+                      <h1 className="text-3xl font-bold mb-2">Rich Text Editor Tutorial</h1>
+                      <p className="text-muted-foreground text-lg">Learn how to use all the formatting features in your synopsis editor</p>
+                    </div>
+
+                    {/* Getting Started */}
+                    <div className="space-y-4">
+                      <h2 className="text-2xl font-semibold flex items-center gap-2">
+                        <span className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold">1</span>
+                        Getting Started
+                      </h2>
+                      <div className="bg-muted/50 p-4 rounded-lg">
+                        <p className="text-sm text-muted-foreground mb-2">
+                          Click in the editor area and start typing your synopsis. The placeholder text will disappear as you begin writing.
+                        </p>
+                        <div className="bg-background p-3 rounded border-l-4 border-primary">
+                          <p className="text-sm"><strong>Tip:</strong> You can select text and apply formatting, or apply formatting first and then type.</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Text Formatting */}
+                    <div className="space-y-4">
+                      <h2 className="text-2xl font-semibold flex items-center gap-2">
+                        <span className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold">2</span>
+                        Text Formatting
+                      </h2>
+                      <div className="grid md:grid-cols-2 gap-4">
+                        <div className="space-y-3">
+                          <h3 className="font-medium">Basic Formatting</h3>
+                          <div className="space-y-2 text-sm">
+                            <div className="flex items-center gap-3">
+                              <Bold className="h-4 w-4" />
+                              <span><strong>Bold</strong> - Make text bold for emphasis</span>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <Italic className="h-4 w-4" />
+                              <span><em>Italic</em> - Italicize text for emphasis</span>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <Underline className="h-4 w-4" />
+                              <span><u>Underline</u> - Underline important text</span>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <Strikethrough className="h-4 w-4" />
+                              <span><s>Strikethrough</s> - Cross out text</span>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="space-y-3">
+                          <h3 className="font-medium">Text Effects</h3>
+                          <div className="space-y-2 text-sm">
+                            <div className="flex items-center gap-3">
+                              <Type className="h-4 w-4" />
+                              <span>Superscript - x² style text</span>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <Type className="h-4 w-4" />
+                              <span>Subscript - H₂O style text</span>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <Highlighter className="h-4 w-4" />
+                              <span><mark>Highlight</mark> - Background highlighting</span>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <Palette className="h-4 w-4" />
+                              <span>Text Color - Custom text colors</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Headings */}
+                    <div className="space-y-4">
+                      <h2 className="text-2xl font-semibold flex items-center gap-2">
+                        <span className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold">3</span>
+                        Headings & Structure
+                      </h2>
+                      <div className="space-y-3">
+                        <div className="grid md:grid-cols-3 gap-4">
+                          <div className="flex items-center gap-3">
+                            <Heading1 className="h-4 w-4" />
+                            <span className="text-sm">Heading 1 - Main sections</span>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <Heading2 className="h-4 w-4" />
+                            <span className="text-sm">Heading 2 - Subsections</span>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <Heading3 className="h-4 w-4" />
+                            <span className="text-sm">Heading 3 - Minor sections</span>
+                          </div>
+                        </div>
+                        <div className="bg-muted/50 p-4 rounded-lg">
+                          <p className="text-sm text-muted-foreground">
+                            Use headings to organize your synopsis into clear sections like "Act 1", "Act 2", "Character Development", etc.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Lists */}
+                    <div className="space-y-4">
+                      <h2 className="text-2xl font-semibold flex items-center gap-2">
+                        <span className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold">4</span>
+                        Lists & Organization
+                      </h2>
+                      <div className="space-y-3">
+                        <div className="grid md:grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-3">
+                              <List className="h-4 w-4" />
+                              <span className="text-sm">Bullet Lists - Unordered lists</span>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <ListOrdered className="h-4 w-4" />
+                              <span className="text-sm">Numbered Lists - Ordered lists</span>
+                            </div>
+                          </div>
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-3">
+                              <Quote className="h-4 w-4" />
+                              <span className="text-sm">Blockquotes - Quote sections</span>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <Code className="h-4 w-4" />
+                              <span className="text-sm">Code Blocks - Monospace text</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Alignment */}
+                    <div className="space-y-4">
+                      <h2 className="text-2xl font-semibold flex items-center gap-2">
+                        <span className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold">5</span>
+                        Text Alignment
+                      </h2>
+                      <div className="grid md:grid-cols-3 gap-4">
+                        <div className="flex items-center gap-3">
+                          <AlignLeft className="h-4 w-4" />
+                          <span className="text-sm">Left Align - Default alignment</span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <AlignCenter className="h-4 w-4" />
+                          <span className="text-sm">Center Align - Centered text</span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <AlignRight className="h-4 w-4" />
+                          <span className="text-sm">Right Align - Right-aligned text</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Keyboard Shortcuts */}
+                    <div className="space-y-4">
+                      <h2 className="text-2xl font-semibold flex items-center gap-2">
+                        <span className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold">6</span>
+                        Keyboard Shortcuts
+                      </h2>
+                      <div className="grid md:grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                          <h3 className="font-medium">Formatting</h3>
+                          <div className="space-y-1 text-sm">
+                            <div className="flex justify-between">
+                              <span>Bold</span>
+                              <kbd className="px-2 py-1 bg-muted rounded text-xs">Ctrl+B</kbd>
+                            </div>
+                            <div className="flex justify-between">
+                              <span>Italic</span>
+                              <kbd className="px-2 py-1 bg-muted rounded text-xs">Ctrl+I</kbd>
+                            </div>
+                            <div className="flex justify-between">
+                              <span>Underline</span>
+                              <kbd className="px-2 py-1 bg-muted rounded text-xs">Ctrl+U</kbd>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <h3 className="font-medium">Structure</h3>
+                          <div className="space-y-1 text-sm">
+                            <div className="flex justify-between">
+                              <span>Heading 1</span>
+                              <kbd className="px-2 py-1 bg-muted rounded text-xs">Ctrl+Alt+1</kbd>
+                            </div>
+                            <div className="flex justify-between">
+                              <span>Heading 2</span>
+                              <kbd className="px-2 py-1 bg-muted rounded text-xs">Ctrl+Alt+2</kbd>
+                            </div>
+                            <div className="flex justify-between">
+                              <span>Bullet List</span>
+                              <kbd className="px-2 py-1 bg-muted rounded text-xs">Ctrl+Shift+8</kbd>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Pro Tips */}
+                    <div className="space-y-4">
+                      <h2 className="text-2xl font-semibold flex items-center gap-2">
+                        <span className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold">7</span>
+                        Pro Tips
+                      </h2>
+                      <div className="grid md:grid-cols-2 gap-4">
+                        <div className="bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 p-4 rounded-lg">
+                          <h3 className="font-medium text-green-800 dark:text-green-200 mb-2">Writing Tips</h3>
+                          <ul className="text-sm text-green-700 dark:text-green-300 space-y-1">
+                            <li>• Start with a clear logline (one-sentence summary)</li>
+                            <li>• Use headings to organize your synopsis</li>
+                            <li>• Keep paragraphs short and focused</li>
+                            <li>• Highlight key plot points</li>
+                          </ul>
+                        </div>
+                        <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 p-4 rounded-lg">
+                          <h3 className="font-medium text-blue-800 dark:text-blue-200 mb-2">Editor Tips</h3>
+                          <ul className="text-sm text-blue-700 dark:text-blue-300 space-y-1">
+                            <li>• Use the word counter to track length</li>
+                            <li>• Save frequently (auto-save enabled)</li>
+                            <li>• Use lists for character descriptions</li>
+                            <li>• Highlight important dialogue</li>
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Footer */}
+                    <div className="text-center pt-8 border-t">
+                      <p className="text-sm text-muted-foreground">
+                        Need more help? The editor auto-saves your work as you type, and you can always use the formatting toolbar above the editor.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </TabsContent>
+            </Tabs>
+          </div>
     </div>
   )
 }

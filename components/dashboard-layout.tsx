@@ -132,12 +132,12 @@ export function DashboardLayout({ user, navigationItems, activeSection, onSectio
   }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="h-screen bg-background flex flex-col overflow-hidden">
       {/* Main Content Area */}
-      <div className="flex flex-1">
+      <div className="flex flex-1 min-h-0">
         {/* Left Pane */}
-        <div className="w-64 bg-sidebar border-r border-sidebar-border flex flex-col">
-          <div className="p-6 border-b border-sidebar-border">
+        <div className="w-64 bg-sidebar border-r border-sidebar-border flex flex-col flex-shrink-0">
+          <div className="p-6 border-b border-sidebar-border flex-shrink-0">
             <div className="flex items-center justify-center">
               <Image
                 src={getThemeLogo(currentTheme)}
@@ -150,7 +150,7 @@ export function DashboardLayout({ user, navigationItems, activeSection, onSectio
             </div>
           </div>
 
-          <div className="p-4 border-b border-sidebar-border">
+          <div className="p-4 border-b border-sidebar-border flex-shrink-0">
             <div className="flex items-center gap-3">
               <Avatar className="h-10 w-10">
                 <AvatarFallback className="bg-sidebar-primary text-sidebar-primary-foreground">
@@ -164,7 +164,7 @@ export function DashboardLayout({ user, navigationItems, activeSection, onSectio
             </div>
           </div>
 
-          <nav className="flex-1 p-4">
+          <nav className="flex-1 p-4 overflow-y-auto">
             <ul className="space-y-2">
               {navigationItems.map((item) => {
                 const Icon = item.icon
@@ -193,8 +193,8 @@ export function DashboardLayout({ user, navigationItems, activeSection, onSectio
         </div>
 
         {/* Main Pane */}
-        <div className="flex-1 flex flex-col">
-          <header className="bg-card border-b border-border p-6">
+        <div className="flex-1 flex flex-col min-w-0">
+          <header className="bg-card border-b border-border p-6 flex-shrink-0">
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-2xl font-bold text-card-foreground">{getPageTitle()}</h2>
@@ -221,12 +221,12 @@ export function DashboardLayout({ user, navigationItems, activeSection, onSectio
             </div>
           </header>
 
-          <main className="flex-1 p-8">{renderContent()}</main>
+          <main className="flex-1 p-8 overflow-y-auto">{renderContent()}</main>
         </div>
       </div>
 
       {/* Credits Pane */}
-      <div className="bg-muted border-t border-border p-4">
+      <div className="bg-muted border-t border-border p-4 flex-shrink-0">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <p className="text-sm text-muted-foreground">StoryBoard - Professional Storyboard Writing Portal © 2024</p>
           <div className="flex items-center gap-4 text-xs text-muted-foreground">
