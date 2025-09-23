@@ -12,6 +12,7 @@ import { useState, useCallback } from "react"
 import { Plus, FileText, Calendar, Clock, Trash2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { ScreenplayEditor } from "./screenplay-editor"
+import { SynopsisEditor } from "./synopsis-editor"
 
 interface Storyboard {
   id: string
@@ -95,7 +96,7 @@ const getTypeColors = (type: "screenplay" | "synopsis") => {
 }
 
 interface StoryboardCardProps {
-  storyboard?: Storyboard
+  storyboard?: Storyboard | null
   onDelete: (id: string) => void
   onCreateDialogOpen: boolean
   onCreateDialogChange: (open: boolean) => void
@@ -108,6 +109,7 @@ interface StoryboardCardProps {
   onNameChange: (e: React.ChangeEvent<HTMLInputElement>) => void
   onTypeChange: (value: "screenplay" | "synopsis") => void
   onScreenplayClick: (id: string) => void
+  onSynopsisClick: (id: string) => void
 }
 
 const StoryboardCard = ({ 
@@ -123,7 +125,8 @@ const StoryboardCard = ({
   onDialogClose,
   onNameChange,
   onTypeChange,
-  onScreenplayClick
+  onScreenplayClick,
+  onSynopsisClick
 }: StoryboardCardProps) => {
   if (!storyboard) {
     // Add New card
@@ -226,6 +229,8 @@ const StoryboardCard = ({
   const handleCardClick = () => {
     if (storyboard.type === "screenplay") {
       onScreenplayClick(storyboard.id)
+    } else if (storyboard.type === "synopsis") {
+      onSynopsisClick(storyboard.id)
     }
   }
 
@@ -421,6 +426,7 @@ export function StoryboardsContent() {
   const [newStoryboardName, setNewStoryboardName] = useState("")
   const [newStoryboardType, setNewStoryboardType] = useState<"screenplay" | "synopsis">("screenplay")
   const [editingScreenplayId, setEditingScreenplayId] = useState<string | null>(null)
+  const [editingSynopsisId, setEditingSynopsisId] = useState<string | null>(null)
 
 
 
@@ -472,8 +478,13 @@ export function StoryboardsContent() {
     setEditingScreenplayId(id)
   }, [])
 
+  const handleSynopsisClick = useCallback((id: string) => {
+    setEditingSynopsisId(id)
+  }, [])
+
   const handleBackFromEditor = useCallback(() => {
     setEditingScreenplayId(null)
+    setEditingSynopsisId(null)
   }, [])
 
 
@@ -491,7 +502,14 @@ export function StoryboardsContent() {
 
   // Show screenplay editor if editing
   if (editingScreenplayId) {
+    const screenplay = storyboards.find(s => s.id === editingScreenplayId)
     return <ScreenplayEditor screenplayId={editingScreenplayId} onBack={handleBackFromEditor} />
+  }
+
+  // Show synopsis editor if editing
+  if (editingSynopsisId) {
+    const synopsis = storyboards.find(s => s.id === editingSynopsisId)
+    return <SynopsisEditor synopsisId={editingSynopsisId} synopsisTitle={synopsis?.title || "Synopsis"} onBack={handleBackFromEditor} />
   }
 
   return (
@@ -520,6 +538,7 @@ export function StoryboardsContent() {
                 onNameChange={handleNameChange}
                 onTypeChange={handleTypeChange}
                 onScreenplayClick={handleScreenplayClick}
+                onSynopsisClick={handleSynopsisClick}
               />
             ))}
           </div>
