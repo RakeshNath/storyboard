@@ -299,7 +299,8 @@ const StoryboardCard = ({
               <Button 
                 variant="ghost" 
                 size="sm" 
-                className="opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive/10 hover:text-destructive"
+                className="opacity-70 group-hover:opacity-100 transition-opacity hover:bg-destructive/10 hover:text-destructive"
+                onClick={(e) => e.stopPropagation()}
               >
                 <Trash2 className="h-4 w-4" />
               </Button>
@@ -313,9 +314,12 @@ const StoryboardCard = ({
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogCancel onClick={(e) => e.stopPropagation()}>Cancel</AlertDialogCancel>
                 <AlertDialogAction 
-                  onClick={() => onDelete(storyboard.id)}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onDelete(storyboard.id)
+                  }}
                   className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                 >
                   Delete
@@ -431,7 +435,12 @@ export function StoryboardsContent() {
 
 
   const handleDelete = useCallback((id: string) => {
-    setStoryboards((prev) => prev.filter((s) => s.id !== id))
+    console.log('Deleting storyboard with id:', id)
+    setStoryboards((prev) => {
+      const filtered = prev.filter((s) => s.id !== id)
+      console.log('Storyboards after deletion:', filtered)
+      return filtered
+    })
   }, [])
 
   const handleCreateStoryboard = useCallback(() => {
@@ -503,7 +512,18 @@ export function StoryboardsContent() {
   // Show screenplay editor if editing
   if (editingScreenplayId) {
     const screenplay = storyboards.find(s => s.id === editingScreenplayId)
-    return <ScreenplayEditor screenplayId={editingScreenplayId} onBack={handleBackFromEditor} />
+    return (
+      <ScreenplayEditor 
+        screenplayId={editingScreenplayId} 
+        onBack={handleBackFromEditor}
+        initialTitle={screenplay?.title}
+        onTitleChange={(newTitle) => {
+          setStoryboards(prev => prev.map(s => 
+            s.id === editingScreenplayId ? { ...s, title: newTitle } : s
+          ))
+        }}
+      />
+    )
   }
 
   // Show synopsis editor if editing

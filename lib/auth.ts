@@ -1,6 +1,12 @@
 export interface User {
   email: string
   name: string
+  firstName?: string
+  lastName?: string
+  dateOfBirth?: string
+  location?: string
+  phoneNumber?: string
+  subscription?: string
   theme?: string
 }
 
