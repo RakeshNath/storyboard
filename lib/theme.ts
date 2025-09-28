@@ -29,6 +29,7 @@ export const loadTheme = () => {
 
 export const applyThemeToDocument = (colors: ThemeColors) => {
   if (typeof window === "undefined") return
+  if (!colors || typeof colors !== 'object') return
 
   const root = document.documentElement
 

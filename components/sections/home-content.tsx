@@ -17,9 +17,9 @@ export function HomeContent({ user }: HomeContentProps) {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card>
+        <Card role="article">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Storyboards</CardTitle>
+            <h3 className="text-sm font-medium">Total Storyboards</h3>
             <FileText className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -28,9 +28,9 @@ export function HomeContent({ user }: HomeContentProps) {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card role="article">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pages Written</CardTitle>
+            <h3 className="text-sm font-medium">Pages Written</h3>
             <Film className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -39,9 +39,9 @@ export function HomeContent({ user }: HomeContentProps) {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card role="article">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Hours Spent</CardTitle>
+            <h3 className="text-sm font-medium">Hours Spent</h3>
             <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -50,9 +50,9 @@ export function HomeContent({ user }: HomeContentProps) {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card role="article">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Completed</CardTitle>
+            <h3 className="text-sm font-medium">Completed</h3>
             <Star className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -62,9 +62,9 @@ export function HomeContent({ user }: HomeContentProps) {
         </Card>
       </div>
 
-      <Card>
+      <Card role="article">
         <CardHeader>
-          <CardTitle>Recent Activity</CardTitle>
+          <h2 className="leading-none font-semibold">Recent Activity</h2>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">

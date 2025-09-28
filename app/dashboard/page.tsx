@@ -197,14 +197,19 @@ const applyUserTheme = (themeId: string) => {
   const theme = themes[themeId as keyof typeof themes]
   if (!theme) return
 
-  const root = document.documentElement
-  Object.entries(theme).forEach(([key, value]) => {
-    root.style.setProperty(`--${key.replace(/([A-Z])/g, '-$1').toLowerCase()}`, value)
-  })
-  
-  // Dispatch custom event for logo updates
-  if (typeof window !== "undefined") {
-    window.dispatchEvent(new CustomEvent('themeChanged', { detail: { theme: themeId } }))
+  try {
+    const root = document.documentElement
+    Object.entries(theme).forEach(([key, value]) => {
+      root.style.setProperty(`--${key.replace(/([A-Z])/g, '-$1').toLowerCase()}`, value)
+    })
+    
+    // Dispatch custom event for logo updates
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent('themeChanged', { detail: { theme: themeId } }))
+    }
+  } catch (error) {
+    // Handle theme application errors gracefully
+    console.error('Theme application error:', error)
   }
 }
 
@@ -215,14 +220,20 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (typeof window !== "undefined") {
-      const currentUser = getUser()
-      if (!currentUser) {
+      try {
+        const currentUser = getUser()
+        if (!currentUser) {
+          router.push("/login")
+        } else {
+          setUser(currentUser)
+          // Apply user's saved theme
+          const userTheme = getUserTheme()
+          applyUserTheme(userTheme)
+        }
+      } catch (error) {
+        // Handle auth errors gracefully
+        console.error('Auth error:', error)
         router.push("/login")
-      } else {
-        setUser(currentUser)
-        // Apply user's saved theme
-        const userTheme = getUserTheme()
-        applyUserTheme(userTheme)
       }
     }
   }, [router])
@@ -231,7 +242,11 @@ export default function DashboardPage() {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+          <div 
+            className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"
+            role="status"
+            aria-label="Loading"
+          ></div>
           <p className="mt-4 text-muted-foreground">Loading...</p>
         </div>
       </div>
