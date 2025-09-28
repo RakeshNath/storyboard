@@ -7,6 +7,20 @@ interface HomeContentProps {
 }
 
 export function HomeContent({ user }: HomeContentProps) {
+  // Handle missing user gracefully
+  if (!user) {
+    return (
+      <div className="space-y-8">
+        <div>
+          <h1 className="text-3xl font-bold text-balance">Welcome, Guest</h1>
+          <p className="text-muted-foreground mt-2 text-pretty">
+            Please log in to access your creative workspace.
+          </p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-8">
       <div>

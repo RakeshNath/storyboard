@@ -216,9 +216,10 @@ describe('HomeContent Component', () => {
   })
 
   describe('Component Props', () => {
-    it('requires user prop', () => {
+    it('handles missing user prop gracefully', () => {
       // @ts-expect-error - Testing missing required prop
-      expect(() => render(<HomeContent />)).toThrow()
+      const { container } = render(<HomeContent />)
+      expect(container).toBeInTheDocument()
     })
 
     it('handles user prop correctly', () => {

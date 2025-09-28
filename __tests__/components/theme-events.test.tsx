@@ -206,9 +206,9 @@ describe('Theme Event Handling', () => {
         expect(screen.getByText('Professional')).toBeInTheDocument()
       })
 
-      // Verify the theme is reflected in the select component
-      const selectElement = screen.getByDisplayValue('Professional')
-      expect(selectElement).toBeInTheDocument()
+      // Verify the theme is reflected in the theme display
+      const themeDisplay = screen.getByText('Professional')
+      expect(themeDisplay).toBeInTheDocument()
     })
 
     it('should handle theme changes from different components', async () => {

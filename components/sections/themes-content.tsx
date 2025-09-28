@@ -326,10 +326,11 @@ export function ThemesContent() {
     const theme = themes.find((t) => t.id === themeId)
     if (!theme) return
 
-    const root = document.documentElement
+    try {
+      const root = document.documentElement
 
-    // Apply comprehensive theme colors to CSS variables
-    root.style.setProperty("--primary", theme.colors.primary)
+      // Apply comprehensive theme colors to CSS variables
+      root.style.setProperty("--primary", theme.colors.primary)
     root.style.setProperty("--primary-foreground", theme.colors.primaryForeground)
     root.style.setProperty("--secondary", theme.colors.secondary)
     root.style.setProperty("--secondary-foreground", theme.colors.secondaryForeground)
@@ -365,6 +366,10 @@ export function ThemesContent() {
     // Dispatch custom event for logo updates
     if (typeof window !== "undefined") {
       window.dispatchEvent(new CustomEvent('themeChanged', { detail: { theme: themeId } }))
+    }
+    } catch (error) {
+      // Handle theme application errors gracefully
+      console.error('Theme application error:', error)
     }
   }
 

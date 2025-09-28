@@ -77,7 +77,9 @@ export function ProfileContent({ user }: ProfileContentProps) {
 
     // Listen for theme changes from other parts of the app
     const handleThemeChange = (event: CustomEvent) => {
-      setCurrentTheme(event.detail.theme)
+      if (event.detail && event.detail.theme && typeof event.detail.theme === 'string') {
+        setCurrentTheme(event.detail.theme)
+      }
     }
 
     window.addEventListener('themeChanged', handleThemeChange as EventListener)

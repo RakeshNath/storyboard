@@ -15,7 +15,7 @@ jest.mock('lucide-react', () => ({
   Check: (props: any) => <svg {...props} data-testid="check-icon" />,
   Palette: (props: any) => <svg {...props} data-testid="palette-icon" />,
   ChevronDown: (props: any) => <svg {...props} data-testid="chevron-down-icon" />,
-  ChevronUp: (props: any) <svg {...props} data-testid="chevron-up-icon" />,
+  ChevronUp: (props: any) => <svg {...props} data-testid="chevron-up-icon" />,
 }))
 
 const mockUser = {
@@ -47,11 +47,14 @@ describe('Theme Integration Tests', () => {
     it('should apply professional theme colors to CSS variables', async () => {
       render(<ThemesContent />)
 
-      // Find and click on professional theme card
-      const professionalCard = screen.getByText('Professional').closest('[data-testid*="theme-card"]')
+      // Find and click on professional theme apply button
+      const professionalText = screen.getByText('Professional')
+      const professionalCard = professionalText.closest('div[class*="bg-card"]')
       expect(professionalCard).toBeInTheDocument()
-
-      fireEvent.click(professionalCard!)
+      
+      const applyButton = professionalCard?.querySelector('button')
+      expect(applyButton).toBeInTheDocument()
+      fireEvent.click(applyButton!)
 
       // Wait for theme to be applied
       await waitFor(() => {
@@ -67,45 +70,54 @@ describe('Theme Integration Tests', () => {
     it('should apply cyberpunk theme colors to CSS variables', async () => {
       render(<ThemesContent />)
 
-      // Find and click on cyberpunk theme card
-      const cyberpunkCard = screen.getByText('Cyberpunk').closest('[data-testid*="theme-card"]')
+      // Find and click on cyberpunk theme apply button
+      const cyberpunkText = screen.getByText('Cyberpunk')
+      const cyberpunkCard = cyberpunkText.closest('div[class*="bg-card"]')
       expect(cyberpunkCard).toBeInTheDocument()
-
-      fireEvent.click(cyberpunkCard!)
+      
+      const applyButton = cyberpunkCard?.querySelector('button')
+      expect(applyButton).toBeInTheDocument()
+      fireEvent.click(applyButton!)
 
       // Wait for theme to be applied
       await waitFor(() => {
-        expect(getCSSVariable('primary')).toBe('oklch(0.55 0.25 280)')
-        expect(getCSSVariable('primary-foreground')).toBe('oklch(0.98 0.005 280)')
-        expect(getCSSVariable('background')).toBe('oklch(0.05 0.01 280)')
-        expect(getCSSVariable('foreground')).toBe('oklch(0.95 0.01 280)')
+        expect(getCSSVariable('primary')).toBe('oklch(0.65 0.18 180)')
+        expect(getCSSVariable('primary-foreground')).toBe('oklch(0.95 0.01 180)')
+        expect(getCSSVariable('background')).toBe('oklch(0.96 0.01 180)')
+        expect(getCSSVariable('foreground')).toBe('oklch(0.2 0.01 180)')
       })
     })
 
     it('should apply minimalist theme colors to CSS variables', async () => {
       render(<ThemesContent />)
 
-      // Find and click on minimalist theme card
-      const minimalistCard = screen.getByText('Minimalist').closest('[data-testid*="theme-card"]')
+      // Find and click on minimalist theme apply button
+      const minimalistText = screen.getByText('Minimalist')
+      const minimalistCard = minimalistText.closest('div[class*="bg-card"]')
       expect(minimalistCard).toBeInTheDocument()
-
-      fireEvent.click(minimalistCard!)
+      
+      const applyButton = minimalistCard?.querySelector('button')
+      expect(applyButton).toBeInTheDocument()
+      fireEvent.click(applyButton!)
 
       // Wait for theme to be applied
       await waitFor(() => {
-        expect(getCSSVariable('primary')).toBe('oklch(0.45 0.12 220)')
-        expect(getCSSVariable('primary-foreground')).toBe('oklch(0.98 0.005 220)')
-        expect(getCSSVariable('background')).toBe('oklch(0.99 0.005 220)')
-        expect(getCSSVariable('foreground')).toBe('oklch(0.15 0.01 220)')
+        expect(getCSSVariable('primary')).toBe('oklch(0.4 0.05 200)')
+        expect(getCSSVariable('primary-foreground')).toBe('oklch(0.98 0.005 200)')
+        expect(getCSSVariable('background')).toBe('oklch(0.98 0.005 200)')
+        expect(getCSSVariable('foreground')).toBe('oklch(0.15 0.01 200)')
       })
     })
 
     it('should apply all theme color properties to CSS variables', async () => {
       render(<ThemesContent />)
 
-      // Find and click on professional theme card
-      const professionalCard = screen.getByText('Professional').closest('[data-testid*="theme-card"]')
-      fireEvent.click(professionalCard!)
+      // Find and click on professional theme apply button
+      const professionalText = screen.getByText('Professional')
+      const professionalCard = professionalText.closest('div[class*="bg-card"]')
+      const applyButton = professionalCard?.querySelector('button')
+      expect(applyButton).toBeInTheDocument()
+      fireEvent.click(applyButton!)
 
       // Wait for all theme properties to be applied
       await waitFor(() => {
@@ -146,8 +158,10 @@ describe('Theme Integration Tests', () => {
       window.addEventListener('themeChanged', themeChangeHandler)
 
       // Change theme
-      const professionalCard = screen.getByText('Professional').closest('[data-testid*="theme-card"]')
-      fireEvent.click(professionalCard!)
+      const professionalCard = screen.getByText('Professional').closest('div[class*="bg-card"]')
+      const applyButton = professionalCard?.querySelector('button')
+      expect(applyButton).toBeInTheDocument()
+      fireEvent.click(applyButton!)
 
       // Wait for event to be dispatched
       await waitFor(() => {
@@ -171,16 +185,18 @@ describe('Theme Integration Tests', () => {
         </div>
       )
 
-      // Initial theme in ProfileContent
-      expect(screen.getByText('Minimalist')).toBeInTheDocument()
+      // Initial theme in ProfileContent - should find at least one Minimalist text
+      expect(screen.getAllByText('Minimalist')).toHaveLength(2)
 
       // Change theme from ThemesContent
-      const professionalCard = screen.getByText('Professional').closest('[data-testid*="theme-card"]')
-      fireEvent.click(professionalCard!)
+      const professionalCard = screen.getByText('Professional').closest('div[class*="bg-card"]')
+      const applyButton = professionalCard?.querySelector('button')
+      expect(applyButton).toBeInTheDocument()
+      fireEvent.click(applyButton!)
 
-      // Wait for ProfileContent to update
+      // Wait for ProfileContent to update - should find at least one Professional text
       await waitFor(() => {
-        expect(screen.getByText('Professional')).toBeInTheDocument()
+        expect(screen.getAllByText('Professional')).toHaveLength(2)
       })
     })
 
@@ -193,18 +209,20 @@ describe('Theme Integration Tests', () => {
         </div>
       )
 
-      // Both ProfileContent instances should show initial theme
+      // Both ProfileContent instances should show initial theme (plus one in ThemesContent)
       const minimalistTexts = screen.getAllByText('Minimalist')
-      expect(minimalistTexts).toHaveLength(2)
+      expect(minimalistTexts).toHaveLength(3)
 
       // Change theme
-      const professionalCard = screen.getByText('Professional').closest('[data-testid*="theme-card"]')
-      fireEvent.click(professionalCard!)
+      const professionalCard = screen.getByText('Professional').closest('div[class*="bg-card"]')
+      const applyButton = professionalCard?.querySelector('button')
+      expect(applyButton).toBeInTheDocument()
+      fireEvent.click(applyButton!)
 
       // Both instances should update
       await waitFor(() => {
         const professionalTexts = screen.getAllByText('Professional')
-        expect(professionalTexts).toHaveLength(2)
+        expect(professionalTexts).toHaveLength(3)
       })
     })
   })
@@ -214,8 +232,10 @@ describe('Theme Integration Tests', () => {
       const { rerender } = render(<ThemesContent />)
 
       // Change theme
-      const professionalCard = screen.getByText('Professional').closest('[data-testid*="theme-card"]')
-      fireEvent.click(professionalCard!)
+      const professionalCard = screen.getByText('Professional').closest('div[class*="bg-card"]')
+      const applyButton = professionalCard?.querySelector('button')
+      expect(applyButton).toBeInTheDocument()
+      fireEvent.click(applyButton!)
 
       // Wait for theme to be applied
       await waitFor(() => {
@@ -235,7 +255,7 @@ describe('Theme Integration Tests', () => {
       render(<ThemesContent />)
 
       // Should load cyberpunk theme
-      expect(getCSSVariable('primary')).toBe('oklch(0.55 0.25 280)')
+      expect(getCSSVariable('primary')).toBe('oklch(0.65 0.18 180)')
     })
   })
 
@@ -273,11 +293,13 @@ describe('Theme Integration Tests', () => {
       console.error = jest.fn()
 
       // Try to change theme
-      const professionalCard = screen.getByText('Professional').closest('[data-testid*="theme-card"]')
+      const professionalCard = screen.getByText('Professional').closest('div[class*="bg-card"]')
       
       // Should not crash the application
       expect(() => {
-        fireEvent.click(professionalCard!)
+        const applyButton = professionalCard?.querySelector('button')
+      expect(applyButton).toBeInTheDocument()
+      fireEvent.click(applyButton!)
       }).not.toThrow()
 
       // Restore original function
@@ -293,12 +315,15 @@ describe('Theme Integration Tests', () => {
       const startTime = performance.now()
 
       // Change theme multiple times rapidly
-      const themes = ['professional', 'cyberpunk', 'minimalist', 'noir']
+      const themes = ['professional', 'cyberpunk', 'minimalist', 'film noir']
       
       for (const themeName of themes) {
-        const themeCard = screen.getByText(themeName.charAt(0).toUpperCase() + themeName.slice(1))
-          .closest('[data-testid*="theme-card"]')
-        fireEvent.click(themeCard!)
+        const displayName = themeName === 'film noir' ? 'Film Noir' : themeName.charAt(0).toUpperCase() + themeName.slice(1)
+        const themeText = screen.getByText(displayName)
+        const themeCard = themeText.closest('div[class*="bg-card"]')
+        const applyButton = themeCard?.querySelector('button')
+        expect(applyButton).toBeInTheDocument()
+        fireEvent.click(applyButton!)
       }
 
       const endTime = performance.now()
@@ -307,9 +332,9 @@ describe('Theme Integration Tests', () => {
       // Theme changes should be fast (less than 100ms for 4 changes)
       expect(duration).toBeLessThan(100)
 
-      // Final theme should be applied correctly
+      // Final theme should be applied correctly (Film Noir)
       await waitFor(() => {
-        expect(getCSSVariable('primary')).toBe('oklch(0.45 0.15 264)') // noir theme primary color
+        expect(getCSSVariable('primary')).toBe('oklch(0.95 0 0)') // Film Noir theme primary color
       })
     })
   })

@@ -191,7 +191,8 @@ describe('Comprehensive Theme Application Integration', () => {
       mockSetProperty.mockClear()
 
       // Click cyberpunk apply button
-      const cyberpunkCard = screen.getByText('Cyberpunk').closest('div')
+      const cyberpunkText = screen.getByText('Cyberpunk')
+      const cyberpunkCard = cyberpunkText.closest('div[class*="bg-card"]')
       expect(cyberpunkCard).toBeInTheDocument()
       
       const applyButton = cyberpunkCard?.querySelector('button')
@@ -228,7 +229,8 @@ describe('Comprehensive Theme Application Integration', () => {
       mockSetProperty.mockClear()
 
       // Click noir apply button
-      const noirCard = screen.getByText('Film Noir').closest('div')
+      const noirText = screen.getByText('Film Noir')
+      const noirCard = noirText.closest('div[class*="bg-card"]')
       expect(noirCard).toBeInTheDocument()
       
       const applyButton = noirCard?.querySelector('button')

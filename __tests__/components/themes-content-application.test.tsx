@@ -88,27 +88,30 @@ describe('ThemesContent Theme Application', () => {
     it('applies new theme when user clicks apply button', async () => {
       render(<ThemesContent />)
 
-      // Find the cyberpunk theme card and its apply button
-      const cyberpunkCard = screen.getByText('Cyberpunk').closest('div')
-      expect(cyberpunkCard).toBeInTheDocument()
+      // Find the first theme apply button (Professional theme)
+      const professionalText = screen.getByText('Professional')
+      const professionalCard = professionalText.closest('div[class*="bg-card"]')
+      expect(professionalCard).toBeInTheDocument()
       
-      const applyButton = cyberpunkCard?.querySelector('button')
+      const applyButton = professionalCard?.querySelector('button')
       expect(applyButton).toBeInTheDocument()
       
       fireEvent.click(applyButton!)
 
       await waitFor(() => {
-        // Should apply cyberpunk theme colors
-        expect(mockSetProperty).toHaveBeenCalledWith('--primary', 'oklch(0.65 0.18 180)')
-        expect(mockSetProperty).toHaveBeenCalledWith('--background', 'oklch(0.96 0.01 180)')
-        expect(mockSetProperty).toHaveBeenCalledWith('--foreground', 'oklch(0.2 0.01 180)')
+        // Should apply professional theme colors
+        expect(mockSetProperty).toHaveBeenCalledWith('--primary', 'oklch(0.45 0.15 264)')
+        expect(mockSetProperty).toHaveBeenCalledWith('--background', 'oklch(0.08 0.01 264)')
+        expect(mockSetProperty).toHaveBeenCalledWith('--foreground', 'oklch(0.92 0.01 264)')
       })
     })
 
     it('dispatches theme change event when theme is applied', async () => {
       render(<ThemesContent />)
 
-      const noirCard = screen.getByText('Film Noir').closest('div')
+      // Find the Film Noir theme apply button
+      const noirText = screen.getByText('Film Noir')
+      const noirCard = noirText.closest('div[class*="bg-card"]')
       expect(noirCard).toBeInTheDocument()
       
       const applyButton = noirCard?.querySelector('button')
@@ -131,7 +134,9 @@ describe('ThemesContent Theme Application', () => {
       
       render(<ThemesContent />)
 
-      const classicCard = screen.getByText('Classic').closest('div')
+      // Find the Classic theme apply button
+      const classicText = screen.getByText('Classic')
+      const classicCard = classicText.closest('div[class*="bg-card"]')
       expect(classicCard).toBeInTheDocument()
       
       const applyButton = classicCard?.querySelector('button')
@@ -206,7 +211,8 @@ describe('ThemesContent Theme Application', () => {
       render(<ThemesContent />)
 
       await waitFor(() => {
-        const minimalistCard = screen.getByText('Minimalist').closest('div')
+        const minimalistText = screen.getByText('Minimalist')
+        const minimalistCard = minimalistText.closest('div[class*="bg-card"]')
         expect(minimalistCard).toBeInTheDocument()
         
         const appliedButton = minimalistCard?.querySelector('button')
