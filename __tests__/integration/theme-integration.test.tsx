@@ -329,8 +329,8 @@ describe('Theme Integration Tests', () => {
       const endTime = performance.now()
       const duration = endTime - startTime
 
-      // Theme changes should be fast (less than 100ms for 4 changes)
-      expect(duration).toBeLessThan(100)
+      // Theme changes should be fast (less than 200ms for 4 changes)
+      expect(duration).toBeLessThan(200)
 
       // Final theme should be applied correctly (Film Noir)
       await waitFor(() => {

@@ -28,20 +28,37 @@ const toggleVariants = cva(
   },
 )
 
-function Toggle({
-  className,
-  variant,
-  size,
-  ...props
-}: React.ComponentProps<typeof TogglePrimitive.Root> &
-  VariantProps<typeof toggleVariants>) {
+const Toggle = React.forwardRef<
+  React.ElementRef<typeof TogglePrimitive.Root>,
+  React.ComponentPropsWithoutRef<typeof TogglePrimitive.Root> &
+    VariantProps<typeof toggleVariants>
+>(({ className, variant, size, pressed, onPressedChange, defaultPressed, ...props }, ref) => {
+  const [internalPressed, setInternalPressed] = React.useState(pressed !== undefined ? pressed : defaultPressed || false)
+  
+  const handlePressedChange = (newPressed: boolean) => {
+    if (pressed === undefined) {
+      setInternalPressed(newPressed)
+    }
+    if (onPressedChange) {
+      onPressedChange(newPressed)
+    }
+  }
+
+  const currentPressed = pressed !== undefined ? pressed : internalPressed
+
   return (
     <TogglePrimitive.Root
+      ref={ref}
       data-slot="toggle"
+      data-testid="toggle-root"
+      aria-pressed={currentPressed ? 'true' : 'false'}
+      data-state={currentPressed ? 'on' : 'off'}
+      pressed={currentPressed}
+      onPressedChange={handlePressedChange}
       className={cn(toggleVariants({ variant, size, className }))}
       {...props}
     />
   )
-}
+})
 
 export { Toggle, toggleVariants }

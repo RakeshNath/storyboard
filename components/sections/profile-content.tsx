@@ -21,13 +21,13 @@ export function ProfileContent({ user }: ProfileContentProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [currentTheme, setCurrentTheme] = useState("minimalist")
   const [profile, setProfile] = useState({
-    firstName: user.firstName || "",
-    lastName: user.lastName || "",
-    email: user.email,
-    dateOfBirth: user.dateOfBirth || "",
-    location: user.location || "",
-    phoneNumber: user.phoneNumber || "",
-    subscription: user.subscription || "free",
+    firstName: user?.firstName || "",
+    lastName: user?.lastName || "",
+    email: user?.email || "",
+    dateOfBirth: user?.dateOfBirth || "",
+    location: user?.location || "",
+    phoneNumber: user?.phoneNumber || "",
+    subscription: user?.subscription || "free",
     bio: "Passionate screenwriter with a love for compelling narratives and character development.",
     website: "https://example.com",
   })
@@ -57,7 +57,7 @@ export function ProfileContent({ user }: ProfileContentProps) {
     return `${result.substring(0, 3)}-${result.substring(3, 6)}-${result.substring(6, 10)}`
   }
 
-  const userId = generateUserId(user.email)
+  const userId = generateUserId(user?.email || '')
 
 
   // Theme mapping for display

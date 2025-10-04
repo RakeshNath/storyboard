@@ -154,12 +154,12 @@ export function DashboardLayout({ user, navigationItems, activeSection, onSectio
             <div className="flex items-center gap-3">
               <Avatar className="h-10 w-10">
                 <AvatarFallback className="bg-sidebar-primary text-sidebar-primary-foreground">
-                  {user.name.charAt(0).toUpperCase()}
+                  {user?.name?.charAt(0).toUpperCase() || 'U'}
                 </AvatarFallback>
               </Avatar>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-sidebar-foreground truncate">{user.name}</p>
-                <p className="text-xs text-sidebar-foreground/70 truncate">{user.email}</p>
+                <p className="text-sm font-medium text-sidebar-foreground truncate">{user?.name || 'User'}</p>
+                <p className="text-xs text-sidebar-foreground/70 truncate">{user?.email || 'user@example.com'}</p>
               </div>
             </div>
           </div>
@@ -216,7 +216,7 @@ export function DashboardLayout({ user, navigationItems, activeSection, onSectio
                   <RefreshCw className="h-3 w-3 mr-1" />
                   Clear Cache
                 </Button>
-                <div className="text-sm text-muted-foreground">Welcome back, {user.name}</div>
+                <div className="text-sm text-muted-foreground">Welcome back, {user?.name || 'User'}</div>
               </div>
             </div>
           </header>

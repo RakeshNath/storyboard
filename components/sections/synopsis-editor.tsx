@@ -403,7 +403,7 @@ export function SynopsisEditor({ synopsisId, synopsisTitle, onBack }: SynopsisEd
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => editor.chain().focus().toggleSuperscript().run()}
+                  onClick={() => editor?.chain()?.focus()?.toggleSuperscript()?.run()}
                   className={editor.isActive('superscript') ? 'bg-accent text-accent-foreground' : ''}
                 >
                   <Type className="h-4 w-4" />
@@ -412,7 +412,7 @@ export function SynopsisEditor({ synopsisId, synopsisTitle, onBack }: SynopsisEd
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => editor.chain().focus().toggleSubscript().run()}
+                  onClick={() => editor?.chain()?.focus()?.toggleSubscript()?.run()}
                   className={editor.isActive('subscript') ? 'bg-accent text-accent-foreground' : ''}
                 >
                   <Type className="h-4 w-4" />

@@ -17,14 +17,19 @@ export interface ThemeConfig {
 }
 
 export const loadTheme = () => {
-  if (typeof window === "undefined") return
+  if (typeof window === "undefined") return "professional"
 
-  const savedTheme = localStorage.getItem("selectedTheme")
-  if (savedTheme) {
-    // Theme will be applied by the ThemesContent component
-    return savedTheme
+  try {
+    const savedTheme = localStorage.getItem("selectedTheme")
+    if (savedTheme) {
+      // Theme will be applied by the ThemesContent component
+      return savedTheme
+    }
+    return "professional"
+  } catch (error) {
+    console.error('Error loading theme from localStorage:', error)
+    return "professional"
   }
-  return "professional"
 }
 
 export const applyThemeToDocument = (colors: ThemeColors) => {

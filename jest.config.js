@@ -27,6 +27,16 @@ const customJestConfig = {
     '!**/playground-content.tsx', // Exclude playground from coverage
     '!**/playground/**', // Exclude any playground directory
   ],
+
+
+  coverageThreshold: {
+    global: {
+      branches: 90,
+      functions: 90,
+      lines: 90,
+      statements: 90,
+    },
+  },
 }
 
 module.exports = createJestConfig(customJestConfig)

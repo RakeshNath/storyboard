@@ -19,11 +19,12 @@ function TooltipProvider({
 }
 
 function Tooltip({
+  open,
   ...props
 }: React.ComponentProps<typeof TooltipPrimitive.Root>) {
   return (
     <TooltipProvider>
-      <TooltipPrimitive.Root data-slot="tooltip" {...props} />
+      <TooltipPrimitive.Root data-slot="tooltip" open={open !== undefined ? String(open) as any : undefined} {...props} />
     </TooltipProvider>
   )
 }

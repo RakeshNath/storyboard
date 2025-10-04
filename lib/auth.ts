@@ -13,8 +13,16 @@ export interface User {
 export const getUser = (): User | null => {
   if (typeof window === "undefined") return null
 
-  const userStr = localStorage.getItem("user")
-  return userStr ? JSON.parse(userStr) : null
+  try {
+    const userStr = localStorage.getItem("user")
+    if (!userStr) return null
+    
+    return JSON.parse(userStr)
+  } catch (error) {
+    // If user data is invalid JSON, remove it and return null
+    localStorage.removeItem("user")
+    return null
+  }
 }
 
 export const updateUserTheme = (theme: string) => {
@@ -22,8 +30,14 @@ export const updateUserTheme = (theme: string) => {
 
   const user = getUser()
   if (user) {
-    const updatedUser = { ...user, theme }
-    localStorage.setItem("user", JSON.stringify(updatedUser))
+    try {
+      const updatedUser = { ...user, theme }
+      localStorage.setItem("user", JSON.stringify(updatedUser))
+    } catch (error) {
+      // Handle localStorage errors gracefully
+      console.error('Failed to update user theme:', error)
+      throw error
+    }
   }
 }
 
@@ -34,7 +48,13 @@ export const getUserTheme = (): string => {
 
 export const logout = () => {
   if (typeof window !== "undefined") {
-    localStorage.removeItem("user")
-    window.location.href = "/login"
+    try {
+      localStorage.removeItem("user")
+      window.location.href = "/login"
+    } catch (error) {
+      console.error('Error during logout:', error)
+      // Still redirect even if localStorage fails
+      window.location.href = "/login"
+    }
   }
 }

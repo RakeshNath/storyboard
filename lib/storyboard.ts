@@ -15,27 +15,42 @@ export interface Storyboard {
 export const getStoryboards = (): Storyboard[] => {
   if (typeof window === "undefined") return []
 
-  const storyboards = localStorage.getItem("storyboards")
-  return storyboards ? JSON.parse(storyboards) : []
+  try {
+    const storyboards = localStorage.getItem("storyboards")
+    return storyboards ? JSON.parse(storyboards) : []
+  } catch (error) {
+    console.error('Error parsing storyboards from localStorage:', error)
+    return []
+  }
 }
 
 export const saveStoryboard = (storyboard: Storyboard) => {
-  const storyboards = getStoryboards()
-  const existingIndex = storyboards.findIndex((s) => s.id === storyboard.id)
+  try {
+    const storyboards = getStoryboards()
+    const existingIndex = storyboards.findIndex((s) => s.id === storyboard.id)
 
-  if (existingIndex >= 0) {
-    storyboards[existingIndex] = storyboard
-  } else {
-    storyboards.push(storyboard)
+    if (existingIndex >= 0) {
+      storyboards[existingIndex] = storyboard
+    } else {
+      storyboards.push(storyboard)
+    }
+
+    localStorage.setItem("storyboards", JSON.stringify(storyboards))
+  } catch (error) {
+    console.error('Error saving storyboard to localStorage:', error)
+    throw error
   }
-
-  localStorage.setItem("storyboards", JSON.stringify(storyboards))
 }
 
 export const deleteStoryboard = (id: string) => {
-  const storyboards = getStoryboards()
-  const filtered = storyboards.filter((s) => s.id !== id)
-  localStorage.setItem("storyboards", JSON.stringify(filtered))
+  try {
+    const storyboards = getStoryboards()
+    const filtered = storyboards.filter((s) => s.id !== id)
+    localStorage.setItem("storyboards", JSON.stringify(filtered))
+  } catch (error) {
+    console.error('Error deleting storyboard from localStorage:', error)
+    throw error
+  }
 }
 
 export const createNewStoryboard = (type: "screenplay" | "synopsis" = "screenplay"): Storyboard => {

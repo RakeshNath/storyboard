@@ -57,6 +57,8 @@ function SheetContent({
       <SheetOverlay />
       <SheetPrimitive.Content
         data-slot="sheet-content"
+        data-testid="sheet-content"
+        data-side={side}
         className={cn(
           'bg-background data-[state=open]:animate-in data-[state=closed]:animate-out fixed z-50 flex flex-col gap-4 shadow-lg transition ease-in-out data-[state=closed]:duration-300 data-[state=open]:duration-500',
           side === 'right' &&
@@ -85,6 +87,7 @@ function SheetHeader({ className, ...props }: React.ComponentProps<'div'>) {
   return (
     <div
       data-slot="sheet-header"
+      data-testid="sheet-header"
       className={cn('flex flex-col gap-1.5 p-4', className)}
       {...props}
     />
@@ -95,6 +98,7 @@ function SheetFooter({ className, ...props }: React.ComponentProps<'div'>) {
   return (
     <div
       data-slot="sheet-footer"
+      data-testid="sheet-footer"
       className={cn('mt-auto flex flex-col gap-2 p-4', className)}
       {...props}
     />
@@ -108,6 +112,7 @@ function SheetTitle({
   return (
     <SheetPrimitive.Title
       data-slot="sheet-title"
+      data-testid="sheet-title"
       className={cn('text-foreground font-semibold', className)}
       {...props}
     />
@@ -121,6 +126,7 @@ function SheetDescription({
   return (
     <SheetPrimitive.Description
       data-slot="sheet-description"
+      data-testid="sheet-description"
       className={cn('text-muted-foreground text-sm', className)}
       {...props}
     />

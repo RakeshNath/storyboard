@@ -105,8 +105,10 @@ function PaginationEllipsis({
 }: React.ComponentProps<'span'>) {
   return (
     <span
-      aria-hidden
+      role="separator"
       data-slot="pagination-ellipsis"
+      data-testid="pagination-ellipsis"
+      aria-hidden="true"
       className={cn('flex size-9 items-center justify-center', className)}
       {...props}
     >

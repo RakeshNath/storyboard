@@ -164,4 +164,6 @@ export {
   FormDescription,
   FormMessage,
   FormField,
+  FormItemContext,
+  FormFieldContext,
 }

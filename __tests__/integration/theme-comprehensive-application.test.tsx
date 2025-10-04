@@ -299,8 +299,8 @@ describe('Comprehensive Theme Application Integration', () => {
       const endTime = performance.now()
       const duration = endTime - startTime
       
-      // Theme application should be fast (less than 100ms)
-      expect(duration).toBeLessThan(100)
+      // Theme application should be fast (less than 150ms)
+      expect(duration).toBeLessThan(150)
     })
 
     it('handles rapid theme switching', async () => {

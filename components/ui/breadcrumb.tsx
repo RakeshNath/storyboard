@@ -43,6 +43,8 @@ function BreadcrumbLink({
   return (
     <Comp
       data-slot="breadcrumb-link"
+      data-testid="breadcrumb-link"
+      role={asChild ? undefined : "link"}
       className={cn('hover:text-foreground transition-colors', className)}
       {...props}
     />
@@ -70,12 +72,13 @@ function BreadcrumbSeparator({
   return (
     <li
       data-slot="breadcrumb-separator"
+      data-testid="breadcrumb-separator"
       role="presentation"
       aria-hidden="true"
       className={cn('[&>svg]:size-3.5', className)}
       {...props}
     >
-      {children ?? <ChevronRight />}
+      {children ?? <ChevronRight data-testid="chevron-right" />}
     </li>
   )
 }
@@ -87,12 +90,13 @@ function BreadcrumbEllipsis({
   return (
     <span
       data-slot="breadcrumb-ellipsis"
+      data-testid="breadcrumb-ellipsis"
       role="presentation"
       aria-hidden="true"
       className={cn('flex size-9 items-center justify-center', className)}
       {...props}
     >
-      <MoreHorizontal className="size-4" />
+      <MoreHorizontal className="size-4" data-testid="more-horizontal" />
       <span className="sr-only">More</span>
     </span>
   )

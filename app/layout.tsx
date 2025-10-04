@@ -26,9 +26,9 @@ export default function RootLayout({
     <html lang="en" className="dark">
       <head>
       </head>
-      <body className={`font-sans ${GeistSans.variable} ${GeistMono.variable} antialiased`}>
+      <body className={`font-sans ${typeof GeistSans === 'string' ? GeistSans : GeistSans.variable} ${typeof GeistMono === 'string' ? GeistMono : GeistMono.variable} antialiased`}>
         <Suspense fallback={null}>{children}</Suspense>
-        <Analytics />
+        <Analytics data-testid="analytics" />
       </body>
     </html>
   )
