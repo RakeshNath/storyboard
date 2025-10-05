@@ -1,6 +1,6 @@
 import React from 'react'
 import { render, screen } from '@testing-library/react'
-import { Badge } from '@/components/ui/badge'
+import { Badge, badgeVariants } from '@/components/ui/badge'
 
 describe('Badge Component', () => {
   describe('Basic Rendering', () => {
@@ -216,6 +216,76 @@ describe('Badge Component', () => {
       const badge = screen.getByText('Clickable Badge')
       expect(badge).toHaveAttribute('role', 'button')
       expect(badge).toHaveAttribute('tabIndex', '0')
+    })
+  })
+
+  describe('badgeVariants Function', () => {
+    it('returns default variant classes', () => {
+      const result = badgeVariants()
+      expect(result).toContain('inline-flex')
+      expect(result).toContain('items-center')
+      expect(result).toContain('rounded-full')
+      expect(result).toContain('border')
+      expect(result).toContain('px-2.5')
+      expect(result).toContain('py-0.5')
+      expect(result).toContain('text-xs')
+      expect(result).toContain('font-semibold')
+      expect(result).toContain('transition-colors')
+      expect(result).toContain('focus:outline-none')
+      expect(result).toContain('focus:ring-2')
+      expect(result).toContain('focus:ring-ring')
+      expect(result).toContain('focus:ring-offset-2')
+    })
+
+    it('returns default variant classes when no variant specified', () => {
+      const result = badgeVariants({})
+      expect(result).toContain('border-transparent')
+      expect(result).toContain('bg-primary')
+      expect(result).toContain('text-primary-foreground')
+      expect(result).toContain('hover:bg-primary/80')
+    })
+
+    it('returns secondary variant classes', () => {
+      const result = badgeVariants({ variant: 'secondary' })
+      expect(result).toContain('border-transparent')
+      expect(result).toContain('bg-secondary')
+      expect(result).toContain('text-secondary-foreground')
+      expect(result).toContain('hover:bg-secondary/80')
+    })
+
+    it('returns destructive variant classes', () => {
+      const result = badgeVariants({ variant: 'destructive' })
+      expect(result).toContain('border-transparent')
+      expect(result).toContain('bg-destructive')
+      expect(result).toContain('text-destructive-foreground')
+      expect(result).toContain('hover:bg-destructive/80')
+    })
+
+    it('returns outline variant classes', () => {
+      const result = badgeVariants({ variant: 'outline' })
+      expect(result).toContain('text-foreground')
+      expect(result).not.toContain('border-transparent')
+      expect(result).not.toContain('bg-primary')
+    })
+
+    it('handles undefined variant', () => {
+      const result = badgeVariants({ variant: undefined })
+      expect(result).toContain('border-transparent')
+      expect(result).toContain('bg-primary')
+      expect(result).toContain('text-primary-foreground')
+    })
+
+    it('handles null variant', () => {
+      const result = badgeVariants({ variant: null })
+      // When variant is null, it should return base classes without variant-specific classes
+      expect(result).toContain('inline-flex')
+      expect(result).toContain('items-center')
+      expect(result).toContain('rounded-full')
+      expect(result).toContain('border')
+      expect(result).toContain('px-2.5')
+      expect(result).toContain('py-0.5')
+      expect(result).toContain('text-xs')
+      expect(result).toContain('font-semibold')
     })
   })
 })

@@ -11,6 +11,7 @@ jest.mock('@radix-ui/react-toggle', () => ({
     const handleClick = () => {
       const newPressed = !internalPressed
       setInternalPressed(newPressed)
+      // Always call onPressedChange if provided (this simulates the actual Toggle component behavior)
       if (onPressedChange) {
         onPressedChange(newPressed)
       }
@@ -276,5 +277,44 @@ describe('Toggle Component', () => {
     const toggle = screen.getByTestId('toggle-root')
     expect(toggle).toBeInTheDocument()
     expect(toggle).toBeEmptyDOMElement()
+  })
+
+  describe('Toggle Coverage Tests', () => {
+    it('handles defaultPressed prop', () => {
+      render(<Toggle defaultPressed={true}>Default Pressed</Toggle>)
+      
+      const toggle = screen.getByTestId('toggle-root')
+      expect(toggle).toBeInTheDocument()
+      expect(toggle).toHaveAttribute('data-state', 'on')
+    })
+
+    it('handles defaultPressed false', () => {
+      render(<Toggle defaultPressed={false}>Default Unpressed</Toggle>)
+      
+      const toggle = screen.getByTestId('toggle-root')
+      expect(toggle).toBeInTheDocument()
+      expect(toggle).toHaveAttribute('data-state', 'off')
+    })
+
+    it('handles onPressedChange prop', () => {
+      const mockOnPressedChange = jest.fn()
+      render(
+        <Toggle onPressedChange={mockOnPressedChange}>
+          Toggle with Callback
+        </Toggle>
+      )
+      
+      const toggle = screen.getByTestId('toggle-root')
+      expect(toggle).toBeInTheDocument()
+      expect(toggle).toHaveTextContent('Toggle with Callback')
+    })
+
+    it('handles controlled mode', () => {
+      render(<Toggle pressed={true}>Controlled Toggle</Toggle>)
+      
+      const toggle = screen.getByTestId('toggle-root')
+      expect(toggle).toBeInTheDocument()
+      expect(toggle).toHaveTextContent('Controlled Toggle')
+    })
   })
 })

@@ -145,4 +145,124 @@ describe('HomePage Component', () => {
       expect(screen.getByText(/Premium/i)).toBeInTheDocument()
     })
   })
+
+  it('redirects to dashboard when user is logged in', async () => {
+    const mockPush = jest.fn()
+    const mockRouter = {
+      push: mockPush,
+      replace: jest.fn(),
+      prefetch: jest.fn(),
+    }
+    
+    // Mock useRouter to return our mock
+    jest.doMock('next/navigation', () => ({
+      useRouter: () => mockRouter,
+      useSearchParams: () => ({
+        get: jest.fn(),
+      }),
+      usePathname: () => '/',
+    }))
+    
+    // Mock localStorage with valid user data
+    Object.defineProperty(window, 'localStorage', {
+      value: {
+        getItem: jest.fn(() => JSON.stringify({ id: '1', name: 'Test User' })),
+      },
+      writable: true,
+    })
+    
+    render(<HomePage />)
+    
+    await waitFor(() => {
+      expect(mockPush).toHaveBeenCalledWith('/dashboard')
+    })
+  })
+
+  it('handles invalid user data in localStorage', async () => {
+    const mockPush = jest.fn()
+    const mockRouter = {
+      push: mockPush,
+      replace: jest.fn(),
+      prefetch: jest.fn(),
+    }
+    
+    // Mock useRouter to return our mock
+    jest.doMock('next/navigation', () => ({
+      useRouter: () => mockRouter,
+      useSearchParams: () => ({
+        get: jest.fn(),
+      }),
+      usePathname: () => '/',
+    }))
+    
+    // Mock localStorage with invalid JSON
+    Object.defineProperty(window, 'localStorage', {
+      value: {
+        getItem: jest.fn(() => 'invalid json'),
+      },
+      writable: true,
+    })
+    
+    render(<HomePage />)
+    
+    await waitFor(() => {
+      expect(screen.getByText(/Welcome to StoryBoard/i)).toBeInTheDocument()
+    })
+    
+    // Should not redirect with invalid JSON
+    expect(mockPush).not.toHaveBeenCalled()
+  })
+
+  it('displays all main content sections', async () => {
+    render(<HomePage />)
+    
+    await waitFor(() => {
+      // Hero section
+      expect(screen.getByText(/Welcome to StoryBoard/i)).toBeInTheDocument()
+      expect(screen.getByText(/Create amazing stories/i)).toBeInTheDocument()
+      
+      // Features section
+      expect(screen.getByText(/Features/i)).toBeInTheDocument()
+      expect(screen.getByText(/AI-Powered Writing/i)).toBeInTheDocument()
+      expect(screen.getByText(/Collaborative Editing/i)).toBeInTheDocument()
+      expect(screen.getByText(/Real-time Sync/i)).toBeInTheDocument()
+      expect(screen.getByText(/Export Options/i)).toBeInTheDocument()
+      
+      // Testimonials section
+      expect(screen.getByText(/What Our Users Say/i)).toBeInTheDocument()
+      
+      // Pricing section
+      expect(screen.getByText(/Simple Pricing/i)).toBeInTheDocument()
+      expect(screen.getByText(/Free/i)).toBeInTheDocument()
+      expect(screen.getByText(/Pro/i)).toBeInTheDocument()
+      
+      // Footer
+      expect(screen.getByText(/© 2024 StoryBoard/i)).toBeInTheDocument()
+    })
+  })
+
+  it('handles button clicks correctly', async () => {
+    const mockPush = jest.fn()
+    const mockRouter = {
+      push: mockPush,
+      replace: jest.fn(),
+      prefetch: jest.fn(),
+    }
+    
+    // Mock useRouter to return our mock
+    jest.doMock('next/navigation', () => ({
+      useRouter: () => mockRouter,
+      useSearchParams: () => ({
+        get: jest.fn(),
+      }),
+      usePathname: () => '/',
+    }))
+    
+    render(<HomePage />)
+    
+    await waitFor(() => {
+      const getStartedButton = screen.getByText('Get Started')
+      expect(getStartedButton).toBeInTheDocument()
+    })
+  })
 })

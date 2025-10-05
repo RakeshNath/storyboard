@@ -166,6 +166,9 @@ describe('Chart Components', () => {
         name: 'sales',
         value: 1000,
         color: '#3b82f6',
+        payload: {
+          fill: '#3b82f6',
+        },
       },
     ]
 
@@ -432,12 +435,18 @@ describe('Chart Components', () => {
         name: 'sales',
         value: 1000,
         color: '#3b82f6',
+        payload: {
+          fill: '#3b82f6',
+        },
       },
       {
         dataKey: 'profit',
         name: 'profit',
         value: 500,
         color: '#10b981',
+        payload: {
+          fill: '#10b981',
+        },
       },
     ]
 
@@ -643,6 +652,9 @@ describe('Chart Components', () => {
           name: 'sales',
           value: 1000,
           color: '#3b82f6',
+          payload: {
+            fill: '#3b82f6',
+          },
         },
       ]
 
@@ -718,6 +730,122 @@ describe('Chart Components', () => {
       )
       
       expect(screen.getByTestId('responsive-container')).toBeInTheDocument()
+    })
+  })
+
+  describe('Chart Coverage Tests', () => {
+    it('useChart throws error when used outside ChartContainer', () => {
+      const TestComponent = () => {
+        useChart() // This should throw an error
+        return <div>Test</div>
+      }
+
+      // Suppress console.error for this test since we expect an error
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {})
+
+      expect(() => {
+        render(<TestComponent />)
+      }).toThrow('useChart must be used within a <ChartContainer />')
+
+      consoleSpy.mockRestore()
+    })
+
+    it('ChartLegendContent returns null when payload is empty', () => {
+      const { container } = render(
+        <ChartContainer config={mockConfig}>
+          <ChartLegendContent payload={[]} />
+        </ChartContainer>
+      )
+      
+      // Should render ChartContainer but not the legend content when payload is empty
+      expect(container.firstChild).toBeInTheDocument()
+      expect(container.querySelector('[data-testid="chart-legend"]')).not.toBeInTheDocument()
+    })
+
+    it('ChartLegendContent returns null when payload is undefined', () => {
+      const { container } = render(
+        <ChartContainer config={mockConfig}>
+          <ChartLegendContent payload={undefined} />
+        </ChartContainer>
+      )
+      
+      // Should render ChartContainer but not the legend content when payload is undefined
+      expect(container.firstChild).toBeInTheDocument()
+      expect(container.querySelector('[data-testid="chart-legend"]')).not.toBeInTheDocument()
+    })
+
+    it('ChartTooltipContent handles payload with null values', () => {
+      // This test covers the line 314 where payload is null
+      const mockPayloadWithNull = [
+        {
+          dataKey: 'sales',
+          name: 'sales',
+          value: 1000,
+          color: '#3b82f6',
+          payload: null, // This should trigger the null check
+        },
+      ]
+
+      render(
+        <ChartContainer config={mockConfig}>
+          <ChartTooltipContent active payload={mockPayloadWithNull} />
+        </ChartContainer>
+      )
+      
+      // Should render without errors
+      expect(screen.getByTestId('chart-tooltip')).toBeInTheDocument()
+    })
+
+    it('ChartTooltipContent handles payload with key in payload object', () => {
+      // This test covers line 330 where key exists in payload
+      const mockPayloadWithKey = [
+        {
+          dataKey: 'sales',
+          name: 'sales',
+          value: 1000,
+          color: '#3b82f6',
+          payload: {
+            fill: '#3b82f6',
+            sales: 'Sales Data', // This should be used as the label
+          },
+        },
+      ]
+
+      render(
+        <ChartContainer config={mockConfig}>
+          <ChartTooltipContent active payload={mockPayloadWithKey} labelKey="sales" />
+        </ChartContainer>
+      )
+      
+      // Should render without errors
+      expect(screen.getByTestId('chart-tooltip')).toBeInTheDocument()
+    })
+
+    it('ChartTooltipContent handles payload with key in payloadPayload', () => {
+      // This test covers line 336 where key exists in payloadPayload
+      const mockPayloadWithNestedKey = [
+        {
+          dataKey: 'sales',
+          name: 'sales',
+          value: 1000,
+          color: '#3b82f6',
+          payload: {
+            fill: '#3b82f6',
+            data: {
+              sales: 'Sales Data', // This should be used as the label
+            },
+          },
+        },
+      ]
+
+      render(
+        <ChartContainer config={mockConfig}>
+          <ChartTooltipContent active payload={mockPayloadWithNestedKey} labelKey="sales" />
+        </ChartContainer>
+      )
+      
+      // Should render without errors
+      expect(screen.getByTestId('chart-tooltip')).toBeInTheDocument()
     })
   })
 })

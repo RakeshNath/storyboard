@@ -24,16 +24,19 @@ jest.mock('@radix-ui/react-toast', () => ({
       {children}
     </div>
   )),
-  Root: React.forwardRef(({ children, className, ...props }: any, ref: any) => (
-    <div
-      ref={ref}
-      data-testid="toast-root"
-      className={className}
-      {...props}
-    >
-      {children}
-    </div>
-  )),
+  Root: React.forwardRef(({ children, className, open, 'data-testid': _, ...props }: any, ref: any) => {
+    return (
+      <div
+        ref={ref}
+        data-testid="toast-root"
+        className={className}
+        {...props}
+        open={open !== undefined ? String(open) : undefined}
+      >
+        {children}
+      </div>
+    )
+  }),
   Action: React.forwardRef(({ children, className, ...props }: any, ref: any) => (
     <button
       ref={ref}
@@ -234,6 +237,45 @@ describe('Toast Components', () => {
       
       expect(ref.current).toBeInTheDocument()
       expect(ref.current).toHaveAttribute('data-testid', 'toast-root')
+    })
+
+    it('handles open prop when undefined', () => {
+      render(
+        <Toast>
+          <ToastTitle>Toast with undefined open</ToastTitle>
+        </Toast>
+      )
+      
+      const toast = screen.getByTestId('toast-root')
+      expect(toast).toBeInTheDocument()
+      // Test that the component renders without errors when open is undefined
+      expect(toast).toHaveTextContent('Toast with undefined open')
+    })
+
+    it('handles open prop when true', () => {
+      render(
+        <Toast open={true}>
+          <ToastTitle>Toast with open true</ToastTitle>
+        </Toast>
+      )
+      
+      const toast = screen.getByTestId('toast-root')
+      expect(toast).toBeInTheDocument()
+      // Test that the component renders without errors when open is true
+      expect(toast).toHaveTextContent('Toast with open true')
+    })
+
+    it('handles open prop when false', () => {
+      render(
+        <Toast open={false}>
+          <ToastTitle>Toast with open false</ToastTitle>
+        </Toast>
+      )
+      
+      const toast = screen.getByTestId('toast-root')
+      expect(toast).toBeInTheDocument()
+      // Test that the component renders without errors when open is false
+      expect(toast).toHaveTextContent('Toast with open false')
     })
   })
 

@@ -447,4 +447,206 @@ describe('Context Menu Components', () => {
       expect(screen.getAllByTestId('circle-icon')).toHaveLength(2)
     })
   })
+
+  describe('Context Menu Sub Components', () => {
+    describe('ContextMenuPortal', () => {
+      it('renders with default props', () => {
+        render(
+          <ContextMenuPortal>
+            <div>Portal Content</div>
+          </ContextMenuPortal>
+        )
+        
+        const portal = screen.getByTestId('context-menu-portal')
+        expect(portal).toBeInTheDocument()
+        expect(portal).toHaveTextContent('Portal Content')
+      })
+
+      it('renders children', () => {
+        render(
+          <ContextMenuPortal>
+            <div>Test Portal</div>
+          </ContextMenuPortal>
+        )
+        
+        expect(screen.getByText('Test Portal')).toBeInTheDocument()
+      })
+
+      it('passes through additional props', () => {
+        render(
+          <ContextMenuPortal data-testid="custom-portal">
+            <div>Portal</div>
+          </ContextMenuPortal>
+        )
+        
+        const portal = screen.getByTestId('custom-portal')
+        expect(portal).toBeInTheDocument()
+      })
+    })
+
+    describe('ContextMenuSub', () => {
+      it('renders with default props', () => {
+        render(
+          <ContextMenuSub>
+            <div>Sub Content</div>
+          </ContextMenuSub>
+        )
+        
+        const sub = screen.getByTestId('context-menu-sub')
+        expect(sub).toBeInTheDocument()
+        expect(sub).toHaveTextContent('Sub Content')
+      })
+
+      it('renders children', () => {
+        render(
+          <ContextMenuSub>
+            <div>Test Sub</div>
+          </ContextMenuSub>
+        )
+        
+        expect(screen.getByText('Test Sub')).toBeInTheDocument()
+      })
+
+      it('passes through additional props', () => {
+        render(
+          <ContextMenuSub data-testid="custom-sub">
+            <div>Sub</div>
+          </ContextMenuSub>
+        )
+        
+        const sub = screen.getByTestId('custom-sub')
+        expect(sub).toBeInTheDocument()
+      })
+    })
+
+    describe('ContextMenuSubContent', () => {
+      it('renders with default props', () => {
+        render(
+          <ContextMenuSubContent>
+            <div>Sub Content</div>
+          </ContextMenuSubContent>
+        )
+        
+        const subContent = screen.getByTestId('context-menu-sub-content')
+        expect(subContent).toBeInTheDocument()
+        expect(subContent).toHaveTextContent('Sub Content')
+      })
+
+      it('renders with custom className', () => {
+        render(
+          <ContextMenuSubContent className="custom-sub-content">
+            <div>Sub Content</div>
+          </ContextMenuSubContent>
+        )
+        
+        const subContent = screen.getByTestId('context-menu-sub-content')
+        expect(subContent).toHaveClass('custom-sub-content')
+      })
+
+      it('renders children', () => {
+        render(
+          <ContextMenuSubContent>
+            <div>Test Sub Content</div>
+          </ContextMenuSubContent>
+        )
+        
+        expect(screen.getByText('Test Sub Content')).toBeInTheDocument()
+      })
+
+      it('passes through additional props', () => {
+        render(
+          <ContextMenuSubContent data-testid="custom-sub-content">
+            <div>Sub Content</div>
+          </ContextMenuSubContent>
+        )
+        
+        const subContent = screen.getByTestId('custom-sub-content')
+        expect(subContent).toBeInTheDocument()
+      })
+    })
+
+    describe('ContextMenuSubTrigger', () => {
+      it('renders with default props', () => {
+        render(
+          <ContextMenuSubTrigger>
+            <div>Sub Trigger</div>
+          </ContextMenuSubTrigger>
+        )
+        
+        const subTrigger = screen.getByTestId('context-menu-sub-trigger')
+        expect(subTrigger).toBeInTheDocument()
+        expect(subTrigger).toHaveTextContent('Sub Trigger')
+      })
+
+      it('renders with custom className', () => {
+        render(
+          <ContextMenuSubTrigger className="custom-sub-trigger">
+            <div>Sub Trigger</div>
+          </ContextMenuSubTrigger>
+        )
+        
+        const subTrigger = screen.getByTestId('context-menu-sub-trigger')
+        expect(subTrigger).toHaveClass('custom-sub-trigger')
+      })
+
+      it('renders children', () => {
+        render(
+          <ContextMenuSubTrigger>
+            <div>Test Sub Trigger</div>
+          </ContextMenuSubTrigger>
+        )
+        
+        expect(screen.getByText('Test Sub Trigger')).toBeInTheDocument()
+      })
+
+      it('passes through additional props', () => {
+        render(
+          <ContextMenuSubTrigger data-testid="custom-sub-trigger">
+            <div>Sub Trigger</div>
+          </ContextMenuSubTrigger>
+        )
+        
+        const subTrigger = screen.getByTestId('custom-sub-trigger')
+        expect(subTrigger).toBeInTheDocument()
+      })
+    })
+
+    describe('Complete Sub Menu Structure', () => {
+      it('renders a complete sub menu', () => {
+        render(
+          <ContextMenu>
+            <ContextMenuTrigger>Right-click me</ContextMenuTrigger>
+            <ContextMenuContent>
+              <ContextMenuItem>Item 1</ContextMenuItem>
+              <ContextMenuSub>
+                <ContextMenuSubTrigger>Sub Menu</ContextMenuSubTrigger>
+                <ContextMenuPortal>
+                  <ContextMenuSubContent>
+                    <ContextMenuItem>Sub Item 1</ContextMenuItem>
+                    <ContextMenuItem>Sub Item 2</ContextMenuItem>
+                  </ContextMenuSubContent>
+                </ContextMenuPortal>
+              </ContextMenuSub>
+              <ContextMenuItem>Item 2</ContextMenuItem>
+            </ContextMenuContent>
+          </ContextMenu>
+        )
+        
+        // Check all components are rendered
+        expect(screen.getByTestId('context-menu')).toBeInTheDocument()
+        expect(screen.getByTestId('context-menu-trigger')).toBeInTheDocument()
+        expect(screen.getByTestId('context-menu-content')).toBeInTheDocument()
+        expect(screen.getByTestId('context-menu-sub')).toBeInTheDocument()
+        expect(screen.getByTestId('context-menu-sub-trigger')).toBeInTheDocument()
+        expect(screen.getAllByTestId('context-menu-portal')).toHaveLength(2) // Main portal + sub portal
+        expect(screen.getByTestId('context-menu-sub-content')).toBeInTheDocument()
+        
+        // Check text content
+        expect(screen.getByText('Right-click me')).toBeInTheDocument()
+        expect(screen.getByText('Sub Menu')).toBeInTheDocument()
+        expect(screen.getByText('Sub Item 1')).toBeInTheDocument()
+        expect(screen.getByText('Sub Item 2')).toBeInTheDocument()
+      })
+    })
+  })
 })

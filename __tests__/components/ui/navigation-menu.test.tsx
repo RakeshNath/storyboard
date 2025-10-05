@@ -8,7 +8,8 @@ import {
   NavigationMenuTrigger,
   NavigationMenuLink,
   NavigationMenuIndicator,
-  NavigationMenuViewport
+  NavigationMenuViewport,
+  navigationMenuTriggerStyle
 } from '@/components/ui/navigation-menu'
 
 // Mock Radix UI Navigation Menu
@@ -483,6 +484,16 @@ describe('Navigation Menu Components', () => {
       
       expect(screen.getByTestId('navigation-menu')).toBeInTheDocument()
       expect(screen.getByTestId('navigation-menu-viewport')).toBeInTheDocument()
+    })
+  })
+
+  describe('navigationMenuTriggerStyle Function', () => {
+    it('returns CSS classes', () => {
+      const result = navigationMenuTriggerStyle()
+      
+      // Test that the function returns a string (mocked as "base-class")
+      expect(typeof result).toBe('string')
+      expect(result).toBe('base-class')
     })
   })
 })
