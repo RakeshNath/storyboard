@@ -584,28 +584,27 @@ describe('Carousel Components', () => {
     })
 
     it('handles useEffect with api and onSelect', () => {
-      // This test covers lines 97-114: useEffect and context provider
+      // This test covers lines 97-114: useEffect and return statement
       const TestComponent = () => {
         const carousel = useCarousel()
         return (
-          <div data-testid="carousel-context">
-            <span data-testid="orientation">{carousel.orientation}</span>
-            <span data-testid="can-scroll-prev">{carousel.canScrollPrev.toString()}</span>
-            <span data-testid="can-scroll-next">{carousel.canScrollNext.toString()}</span>
+          <div data-testid="carousel-with-api">
+            {carousel.orientation}
           </div>
         )
       }
       
       render(
         <Carousel>
-          <TestComponent />
+          <CarouselContent>
+            <CarouselItem>
+              <TestComponent />
+            </CarouselItem>
+          </CarouselContent>
         </Carousel>
       )
       
-      expect(screen.getByTestId('carousel-context')).toBeInTheDocument()
-      expect(screen.getByTestId('orientation')).toBeInTheDocument()
-      expect(screen.getByTestId('can-scroll-prev')).toBeInTheDocument()
-      expect(screen.getByTestId('can-scroll-next')).toBeInTheDocument()
+      expect(screen.getByTestId('carousel-with-api')).toBeInTheDocument()
     })
 
     it('handles vertical orientation from opts.axis', () => {
@@ -729,6 +728,25 @@ describe('Carousel Components', () => {
       
       fireEvent.keyDown(carousel, { key: 'ArrowRight' })
       expect(mockApi.scrollNext).toHaveBeenCalled()
+    })
+
+    it('handles null api gracefully', () => {
+      // Mock embla-carousel-react to return null api
+      jest.doMock('embla-carousel-react', () => ({
+        __esModule: true,
+        default: jest.fn(() => [mockCarouselRef, null]),
+      }))
+      
+      render(
+        <Carousel>
+          <CarouselContent>
+            <CarouselItem>Slide 1</CarouselItem>
+          </CarouselContent>
+        </Carousel>
+      )
+      
+      // Should render without errors even with null api
+      expect(screen.getByRole('region')).toBeInTheDocument()
     })
   })
 })

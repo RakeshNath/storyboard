@@ -37,7 +37,8 @@ describe('ThemesContent Component', () => {
   it('renders theme selection grid', () => {
     render(<ThemesContent />)
     
-    expect(screen.getByText(/Professional/i)).toBeInTheDocument()
+    const professionalElements = screen.getAllByText(/Professional/i)
+    expect(professionalElements.length).toBeGreaterThan(0)
     // Other themes might not be present in current implementation
     expect(screen.getAllByText(/Themes/i)[0]).toBeInTheDocument()
   })
@@ -45,9 +46,11 @@ describe('ThemesContent Component', () => {
   it('displays current theme as selected', () => {
     render(<ThemesContent />)
     
-    // Professional theme should be selected by default
-    const professionalTheme = screen.getByText(/Professional/i)
-    expect(professionalTheme).toBeInTheDocument()
+    // Professional theme should be selected by default (mock returns 'professional')
+    const professionalElements = screen.getAllByText(/Professional/i)
+    expect(professionalElements.length).toBeGreaterThan(0)
+    // Check for the "Applied" button which indicates selection
+    expect(screen.getAllByText('Applied')[0]).toBeInTheDocument()
   })
 
   it('handles theme selection', async () => {
@@ -143,10 +146,10 @@ describe('ThemesContent Component', () => {
     const user = userEvent.setup()
     render(<ThemesContent />)
     
-    const firstTheme = screen.getByText(/Professional/i)
+    const firstThemeElements = screen.getAllByText(/Professional/i)
     await user.tab()
     
-    expect(firstTheme).toBeInTheDocument()
+    expect(firstThemeElements.length).toBeGreaterThan(0)
   })
 
   it('renders efficiently with many themes', () => {
@@ -169,10 +172,10 @@ describe('ThemesContent Component', () => {
     const user = userEvent.setup()
     render(<ThemesContent />)
     
-    const themeCard = screen.getByText(/Professional/i)
-    await user.hover(themeCard)
+    const themeCardElements = screen.getAllByText(/Professional/i)
+    await user.hover(themeCardElements[0])
     
     // Should show preview on hover
-    expect(themeCard).toBeInTheDocument()
+    expect(themeCardElements[0]).toBeInTheDocument()
   })
 })

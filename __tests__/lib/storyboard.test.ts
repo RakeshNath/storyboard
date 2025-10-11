@@ -325,4 +325,20 @@ describe('Storyboard Utilities', () => {
       expect(localStorageMock.setItem).toHaveBeenCalled()
     })
   })
+
+  describe('Server-Side Rendering (SSR)', () => {
+    it('getStoryboards returns empty array when window is undefined (SSR)', () => {
+      // Mock window as undefined (server-side)
+      const originalWindow = global.window
+      // @ts-ignore
+      global.window = undefined
+      
+      const storyboards = getStoryboards()
+      
+      expect(storyboards).toEqual([])
+      
+      // Restore window
+      global.window = originalWindow
+    })
+  })
 })

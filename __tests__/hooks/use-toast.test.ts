@@ -394,6 +394,53 @@ describe('useToast Hook', () => {
         expect(result.current.toasts.length).toBeLessThanOrEqual(1)
       })
     })
+
+    it('covers timeout cleanup in addToRemoveQueue', async () => {
+      // Mock setTimeout to use a shorter delay for testing
+      const originalSetTimeout = global.setTimeout
+      const mockSetTimeout = jest.fn((callback, delay) => {
+        // Execute callback immediately for testing
+        callback()
+        return 1 // Return a mock timer ID
+      })
+      global.setTimeout = mockSetTimeout
+
+      const { result } = renderHook(() => useToast())
+      
+      act(() => {
+        result.current.toast({ title: 'Test Toast' })
+      })
+      
+      // Dismiss the toast to trigger addToRemoveQueue
+      act(() => {
+        result.current.dismiss(result.current.toasts[0].id)
+      })
+      
+      // Verify setTimeout was called
+      expect(mockSetTimeout).toHaveBeenCalled()
+      
+      // Restore original setTimeout
+      global.setTimeout = originalSetTimeout
+    })
+
+    it('covers onOpenChange callback when toast is closed', () => {
+      const { result } = renderHook(() => useToast())
+      
+      act(() => {
+        result.current.toast({ title: 'Test Toast' })
+      })
+      
+      // Get the toast and call onOpenChange with false
+      const toast = result.current.toasts[0]
+      expect(toast.onOpenChange).toBeDefined()
+      
+      act(() => {
+        toast.onOpenChange?.(false)
+      })
+      
+      // Toast should be dismissed
+      expect(result.current.toasts[0].open).toBe(false)
+    })
   })
 })
 

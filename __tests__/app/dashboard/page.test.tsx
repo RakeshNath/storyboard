@@ -145,6 +145,54 @@ describe('DashboardPage', () => {
     expect(screen.getByTestId('dashboard-layout')).toBeInTheDocument()
   })
 
+  it('handles theme application DOM errors gracefully', async () => {
+    // Mock document.documentElement.style.setProperty to throw an error
+    const originalSetProperty = document.documentElement.style.setProperty
+    document.documentElement.style.setProperty = jest.fn(() => {
+      throw new Error('DOM manipulation error')
+    })
+    
+    // Mock getUserTheme to return a valid theme
+    ;(getUserTheme as jest.Mock).mockReturnValue({
+      primary: '#000000',
+      secondary: '#ffffff'
+    })
+    
+    render(<DashboardPage />)
+    
+    // Should still render the dashboard despite theme application error
+    expect(screen.getByTestId('dashboard-layout')).toBeInTheDocument()
+    
+    // Restore original function
+    document.documentElement.style.setProperty = originalSetProperty
+  })
+
+  it('handles applyUserTheme function errors gracefully', async () => {
+    // Mock getUserTheme to return a valid theme
+    ;(getUserTheme as jest.Mock).mockReturnValue({
+      primary: '#000000',
+      secondary: '#ffffff'
+    })
+    
+    // Mock document.documentElement.style.setProperty to throw an error
+    const originalSetProperty = document.documentElement.style.setProperty
+    document.documentElement.style.setProperty = jest.fn(() => {
+      throw new Error('DOM manipulation error')
+    })
+    
+    // Suppress console.error for this test since we expect an error
+    const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {})
+    
+    render(<DashboardPage />)
+    
+    // Should still render the dashboard despite theme application error
+    expect(screen.getByTestId('dashboard-layout')).toBeInTheDocument()
+    
+    // Restore original function
+    document.documentElement.style.setProperty = originalSetProperty
+    consoleSpy.mockRestore()
+  })
+
   it('updates active section state correctly', async () => {
     render(<DashboardPage />)
     
@@ -201,5 +249,19 @@ describe('DashboardPage', () => {
     rerender(<DashboardPage />)
     
     expect(screen.getByTestId('dashboard-layout')).toBeInTheDocument()
+  })
+
+  it.skip('handles theme application errors gracefully', () => {
+    // Line 212 is a console.error in a try-catch block
+    // This error path is difficult to test as it requires theme application to fail
+    // The error handling exists and doesn't crash the app
+    const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation()
+    
+    // Render should work
+    render(<DashboardPage />)
+    
+    expect(screen.getByTestId('dashboard-layout')).toBeInTheDocument()
+    
+    consoleErrorSpy.mockRestore()
   })
 })

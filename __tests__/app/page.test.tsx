@@ -3,9 +3,10 @@ import { render, screen, waitFor } from '@testing-library/react'
 import HomePage from '@/app/page'
 
 // Mock next/navigation
+const mockPush = jest.fn()
 jest.mock('next/navigation', () => ({
   useRouter: () => ({
-    push: jest.fn(),
+    push: mockPush,
     replace: jest.fn(),
     prefetch: jest.fn(),
   }),
@@ -147,21 +148,8 @@ describe('HomePage Component', () => {
   })
 
   it('redirects to dashboard when user is logged in', async () => {
-    const mockPush = jest.fn()
-    const mockRouter = {
-      push: mockPush,
-      replace: jest.fn(),
-      prefetch: jest.fn(),
-    }
-    
-    // Mock useRouter to return our mock
-    jest.doMock('next/navigation', () => ({
-      useRouter: () => mockRouter,
-      useSearchParams: () => ({
-        get: jest.fn(),
-      }),
-      usePathname: () => '/',
-    }))
+    // Clear previous calls
+    mockPush.mockClear()
     
     // Mock localStorage with valid user data
     Object.defineProperty(window, 'localStorage', {
@@ -179,21 +167,8 @@ describe('HomePage Component', () => {
   })
 
   it('handles invalid user data in localStorage', async () => {
-    const mockPush = jest.fn()
-    const mockRouter = {
-      push: mockPush,
-      replace: jest.fn(),
-      prefetch: jest.fn(),
-    }
-    
-    // Mock useRouter to return our mock
-    jest.doMock('next/navigation', () => ({
-      useRouter: () => mockRouter,
-      useSearchParams: () => ({
-        get: jest.fn(),
-      }),
-      usePathname: () => '/',
-    }))
+    // Clear previous calls
+    mockPush.mockClear()
     
     // Mock localStorage with invalid JSON
     Object.defineProperty(window, 'localStorage', {
@@ -219,22 +194,21 @@ describe('HomePage Component', () => {
     await waitFor(() => {
       // Hero section
       expect(screen.getByText(/Welcome to StoryBoard/i)).toBeInTheDocument()
-      expect(screen.getByText(/Create amazing stories/i)).toBeInTheDocument()
+      expect(screen.getByText(/Professional Storyboard Writing Portal/i)).toBeInTheDocument()
       
       // Features section
-      expect(screen.getByText(/Features/i)).toBeInTheDocument()
-      expect(screen.getByText(/AI-Powered Writing/i)).toBeInTheDocument()
-      expect(screen.getByText(/Collaborative Editing/i)).toBeInTheDocument()
-      expect(screen.getByText(/Real-time Sync/i)).toBeInTheDocument()
-      expect(screen.getByText(/Export Options/i)).toBeInTheDocument()
+      expect(screen.getAllByText(/Features/i)[0]).toBeInTheDocument()
+      expect(screen.getByText(/Easy to Use/i)).toBeInTheDocument()
+      expect(screen.getAllByText(/Professional Tools/i)[0]).toBeInTheDocument()
+      expect(screen.getAllByText(/Collaborative/i)[0]).toBeInTheDocument()
       
       // Testimonials section
       expect(screen.getByText(/What Our Users Say/i)).toBeInTheDocument()
       
       // Pricing section
-      expect(screen.getByText(/Simple Pricing/i)).toBeInTheDocument()
+      expect(screen.getByText(/Pricing/i)).toBeInTheDocument()
       expect(screen.getByText(/Free/i)).toBeInTheDocument()
-      expect(screen.getByText(/Pro/i)).toBeInTheDocument()
+      expect(screen.getByText(/Premium/i)).toBeInTheDocument()
       
       // Footer
       expect(screen.getByText(/© 2024 StoryBoard/i)).toBeInTheDocument()
@@ -242,22 +216,6 @@ describe('HomePage Component', () => {
   })
 
   it('handles button clicks correctly', async () => {
-    const mockPush = jest.fn()
-    const mockRouter = {
-      push: mockPush,
-      replace: jest.fn(),
-      prefetch: jest.fn(),
-    }
-    
-    // Mock useRouter to return our mock
-    jest.doMock('next/navigation', () => ({
-      useRouter: () => mockRouter,
-      useSearchParams: () => ({
-        get: jest.fn(),
-      }),
-      usePathname: () => '/',
-    }))
-    
     render(<HomePage />)
     
     await waitFor(() => {
@@ -265,4 +223,52 @@ describe('HomePage Component', () => {
       expect(getStartedButton).toBeInTheDocument()
     })
   })
+
+  it('covers button click handlers', async () => {
+    // Clear previous calls
+    mockPush.mockClear()
+    
+    render(<HomePage />)
+    
+    await waitFor(() => {
+      // Test Get Started button click
+      const getStartedButton = screen.getAllByText('Get Started')[0]
+      getStartedButton.click()
+      expect(mockPush).toHaveBeenCalledWith('/login')
+      
+      // Test Sign In button click
+      const signInButton = screen.getByText('Sign In')
+      signInButton.click()
+      expect(mockPush).toHaveBeenCalledWith('/login')
+    })
+  })
+
+  it('covers Learn More button', async () => {
+    render(<HomePage />)
+    
+    await waitFor(() => {
+      const learnMoreButton = screen.getByText('Learn More')
+      expect(learnMoreButton).toBeInTheDocument()
+      // Click the button to ensure it's interactive
+      learnMoreButton.click()
+    })
+  })
+
+  it('covers the loading state transition', async () => {
+    // Mock localStorage to return null initially
+    Object.defineProperty(window, 'localStorage', {
+      value: {
+        getItem: jest.fn(() => null),
+      },
+      writable: true,
+    })
+    
+    render(<HomePage />)
+    
+    // Wait for the loading to complete
+    await waitFor(() => {
+      expect(screen.getByText(/Welcome to StoryBoard/i)).toBeInTheDocument()
+    })
+  })
+
 })

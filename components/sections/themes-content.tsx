@@ -433,6 +433,12 @@ export function ThemesContent() {
                     </div>
                   )}
                 </div>
+                <p 
+                  className="text-xs mt-2" 
+                  style={{ color: theme.colors.mutedForeground }}
+                >
+                  {theme.description}
+                </p>
               </CardHeader>
 
               <CardContent className="space-y-2">

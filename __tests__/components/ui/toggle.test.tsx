@@ -3,43 +3,40 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { Toggle } from '@/components/ui/toggle'
 
-// Mock Radix UI Toggle
+// Mock Radix UI Toggle to simulate the actual component behavior
 jest.mock('@radix-ui/react-toggle', () => ({
   Root: React.forwardRef(({ children, className, onPressedChange, pressed, defaultPressed, ...props }: any, ref: any) => {
+    // Simulate the actual Toggle component's internal logic
     const [internalPressed, setInternalPressed] = React.useState(pressed !== undefined ? pressed : defaultPressed || false)
     
-    const handleClick = () => {
-      const newPressed = !internalPressed
-      setInternalPressed(newPressed)
-      // Always call onPressedChange if provided (this simulates the actual Toggle component behavior)
+    const handlePressedChange = (newPressed: boolean) => {
+      // This is the actual logic from the Toggle component
+      if (pressed === undefined) {
+        setInternalPressed(newPressed)
+      }
       if (onPressedChange) {
         onPressedChange(newPressed)
       }
     }
     
-    const handleKeyDown = (e: React.KeyboardEvent) => {
-      if (e.key === ' ' || e.key === 'Enter') {
-        e.preventDefault()
-        handleClick()
-      }
-    }
+    const currentPressed = pressed !== undefined ? pressed : internalPressed
     
-    return (
-      <button
-        ref={ref}
-        type="button"
-        data-testid="toggle-root"
-        className={className}
-        data-slot="toggle"
-        data-state={internalPressed ? 'on' : 'off'}
-        aria-pressed={internalPressed ? 'true' : 'false'}
-        onClick={handleClick}
-        onKeyDown={handleKeyDown}
-        {...props}
-      >
-        {children}
-      </button>
-    )
+    return React.createElement('button', {
+      ref,
+      'data-testid': 'toggle-root',
+      className,
+      'data-slot': 'toggle',
+      'data-state': currentPressed ? 'on' : 'off',
+      'aria-pressed': currentPressed ? 'true' : 'false',
+      onClick: () => handlePressedChange(!currentPressed),
+      onKeyDown: (e: React.KeyboardEvent) => {
+        if (e.key === ' ' || e.key === 'Enter') {
+          e.preventDefault()
+          handlePressedChange(!currentPressed)
+        }
+      },
+      ...props
+    }, children)
   }),
 }))
 
@@ -315,6 +312,76 @@ describe('Toggle Component', () => {
       const toggle = screen.getByTestId('toggle-root')
       expect(toggle).toBeInTheDocument()
       expect(toggle).toHaveTextContent('Controlled Toggle')
+    })
+
+    it('covers internal state management when pressed is undefined', async () => {
+      const user = userEvent.setup()
+      const mockOnPressedChange = jest.fn()
+      
+      // Render without pressed prop (uncontrolled mode)
+      render(<Toggle onPressedChange={mockOnPressedChange}>Uncontrolled Toggle</Toggle>)
+      
+      const toggle = screen.getByTestId('toggle-root')
+      expect(toggle).toHaveAttribute('data-state', 'off')
+      
+      // Click to toggle state
+      await user.click(toggle)
+      
+      // Should call onPressedChange and update internal state
+      expect(mockOnPressedChange).toHaveBeenCalledWith(true)
+      expect(toggle).toHaveAttribute('data-state', 'on')
+    })
+
+    it('covers onPressedChange callback execution', async () => {
+      const user = userEvent.setup()
+      const mockOnPressedChange = jest.fn()
+      
+      render(<Toggle onPressedChange={mockOnPressedChange}>Toggle with Callback</Toggle>)
+      
+      const toggle = screen.getByTestId('toggle-root')
+      await user.click(toggle)
+      
+      // Should call onPressedChange
+      expect(mockOnPressedChange).toHaveBeenCalledWith(true)
+    })
+
+    it('covers handlePressedChange logic with pressed undefined', async () => {
+      const user = userEvent.setup()
+      const mockOnPressedChange = jest.fn()
+      
+      // Test the specific logic in handlePressedChange when pressed is undefined
+      render(<Toggle onPressedChange={mockOnPressedChange}>Test Toggle</Toggle>)
+      
+      const toggle = screen.getByTestId('toggle-root')
+      
+      // Click to trigger handlePressedChange
+      await user.click(toggle)
+      
+      // Verify the callback was called
+      expect(mockOnPressedChange).toHaveBeenCalledWith(true)
+      
+      // Click again to test the other branch
+      await user.click(toggle)
+      expect(mockOnPressedChange).toHaveBeenCalledWith(false)
+    })
+
+    it('covers handlePressedChange when pressed is undefined and no onPressedChange callback', async () => {
+      const user = userEvent.setup()
+      
+      // Test the specific logic in handlePressedChange when pressed is undefined and no callback
+      render(<Toggle>Toggle without callback</Toggle>)
+      
+      const toggle = screen.getByTestId('toggle-root')
+      
+      // Click to trigger handlePressedChange - should only update internal state
+      await user.click(toggle)
+      
+      // Should update internal state but no callback to verify
+      expect(toggle).toHaveAttribute('data-state', 'on')
+      
+      // Click again to test the other branch
+      await user.click(toggle)
+      expect(toggle).toHaveAttribute('data-state', 'off')
     })
   })
 })

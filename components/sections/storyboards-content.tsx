@@ -407,6 +407,13 @@ const StoryboardCard = ({
             </div>
         )}
 
+        {/* Genre */}
+        {storyboard.genre && (
+          <div className="text-xs text-muted-foreground text-center font-medium">
+            {storyboard.genre}
+          </div>
+        )}
+
         {/* Dates */}
         <div className="space-y-1 pt-2 border-t border-border/50">
           <div className="flex items-center gap-2 text-xs text-muted-foreground">

@@ -145,4 +145,23 @@ describe('RootLayout Component', () => {
     expect(screen.getByText('Content')).toBeInTheDocument()
     expect(screen.getByText('Footer')).toBeInTheDocument()
   })
+
+  it('handles font variables as objects', () => {
+    // Mock fonts as objects instead of strings
+    jest.doMock('geist/font/sans', () => ({
+      GeistSans: { variable: 'mock-geist-sans-var' },
+    }))
+    
+    jest.doMock('geist/font/mono', () => ({
+      GeistMono: { variable: 'mock-geist-mono-var' },
+    }))
+    
+    render(
+      <RootLayout>
+        <div data-testid="test-content">Test Content</div>
+      </RootLayout>
+    )
+    
+    expect(screen.getByTestId('test-content')).toBeInTheDocument()
+  })
 })

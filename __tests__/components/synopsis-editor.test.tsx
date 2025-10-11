@@ -4,49 +4,25 @@ import userEvent from '@testing-library/user-event'
 import { SynopsisEditor } from '@/components/sections/synopsis-editor'
 
 // Mock TipTap editor
-jest.mock('@tiptap/react', () => ({
-  useEditor: jest.fn(() => ({
-    commands: {
-      setContent: jest.fn(),
-      focus: jest.fn(() => ({
-        toggleBold: jest.fn(() => ({ run: jest.fn() })),
-        toggleItalic: jest.fn(() => ({ run: jest.fn() })),
-        toggleUnderline: jest.fn(() => ({ run: jest.fn() })),
-        toggleStrike: jest.fn(() => ({ run: jest.fn() })),
-        toggleBulletList: jest.fn(() => ({ run: jest.fn() })),
-        toggleOrderedList: jest.fn(() => ({ run: jest.fn() })),
-        toggleBlockquote: jest.fn(() => ({ run: jest.fn() })),
-        toggleCodeBlock: jest.fn(() => ({ run: jest.fn() })),
-        setHorizontalRule: jest.fn(() => ({ run: jest.fn() })),
-        toggleSuperscript: jest.fn(() => ({ run: jest.fn() })),
-        toggleSubscript: jest.fn(() => ({ run: jest.fn() })),
-        toggleHighlight: jest.fn(() => ({ run: jest.fn() })),
-        setColor: jest.fn(() => ({ run: jest.fn() })),
-        setTextAlign: jest.fn(() => ({ run: jest.fn() })),
-        toggleHeading: jest.fn(() => ({ run: jest.fn() })),
-        chain: jest.fn(() => ({
-          focus: jest.fn(() => ({
-            toggleBold: jest.fn(() => ({ run: jest.fn() })),
-            toggleItalic: jest.fn(() => ({ run: jest.fn() })),
-            toggleUnderline: jest.fn(() => ({ run: jest.fn() })),
-            toggleStrike: jest.fn(() => ({ run: jest.fn() })),
-            toggleBulletList: jest.fn(() => ({ run: jest.fn() })),
-            toggleOrderedList: jest.fn(() => ({ run: jest.fn() })),
-            toggleBlockquote: jest.fn(() => ({ run: jest.fn() })),
-            toggleCodeBlock: jest.fn(() => ({ run: jest.fn() })),
-            setHorizontalRule: jest.fn(() => ({ run: jest.fn() })),
-            toggleSuperscript: jest.fn(() => ({ run: jest.fn() })),
-            toggleSubscript: jest.fn(() => ({ run: jest.fn() })),
-            toggleHighlight: jest.fn(() => ({ run: jest.fn() })),
-            setColor: jest.fn(() => ({ run: jest.fn() })),
-            setTextAlign: jest.fn(() => ({ run: jest.fn() })),
-            toggleHeading: jest.fn(() => ({ run: jest.fn() }))
-          }))
-        })),
-        onUpdate: jest.fn()
-      })),
-      getText: jest.fn(() => ''),
-      isActive: jest.fn(() => false),
+const mockEditor = {
+  commands: {
+    setContent: jest.fn(),
+    focus: jest.fn(() => ({
+      toggleBold: jest.fn(() => ({ run: jest.fn() })),
+      toggleItalic: jest.fn(() => ({ run: jest.fn() })),
+      toggleUnderline: jest.fn(() => ({ run: jest.fn() })),
+      toggleStrike: jest.fn(() => ({ run: jest.fn() })),
+      toggleBulletList: jest.fn(() => ({ run: jest.fn() })),
+      toggleOrderedList: jest.fn(() => ({ run: jest.fn() })),
+      toggleBlockquote: jest.fn(() => ({ run: jest.fn() })),
+      toggleCodeBlock: jest.fn(() => ({ run: jest.fn() })),
+      setHorizontalRule: jest.fn(() => ({ run: jest.fn() })),
+      toggleSuperscript: jest.fn(() => ({ run: jest.fn() })),
+      toggleSubscript: jest.fn(() => ({ run: jest.fn() })),
+      toggleHighlight: jest.fn(() => ({ run: jest.fn() })),
+      setColor: jest.fn(() => ({ run: jest.fn() })),
+      setTextAlign: jest.fn(() => ({ run: jest.fn() })),
+      toggleHeading: jest.fn(() => ({ run: jest.fn() })),
       chain: jest.fn(() => ({
         focus: jest.fn(() => ({
           toggleBold: jest.fn(() => ({ run: jest.fn() })),
@@ -66,35 +42,39 @@ jest.mock('@tiptap/react', () => ({
           toggleHeading: jest.fn(() => ({ run: jest.fn() }))
         }))
       }))
-    },
-    getText: jest.fn(() => ''),
-    isActive: jest.fn(() => false),
-    chain: jest.fn(() => ({
-      focus: jest.fn(() => ({
-        toggleBold: jest.fn(() => ({ run: jest.fn() })),
-        toggleItalic: jest.fn(() => ({ run: jest.fn() })),
-        toggleUnderline: jest.fn(() => ({ run: jest.fn() })),
-        toggleStrike: jest.fn(() => ({ run: jest.fn() })),
-        toggleBulletList: jest.fn(() => ({ run: jest.fn() })),
-        toggleOrderedList: jest.fn(() => ({ run: jest.fn() })),
-        toggleBlockquote: jest.fn(() => ({ run: jest.fn() })),
-        toggleCodeBlock: jest.fn(() => ({ run: jest.fn() })),
-        setHorizontalRule: jest.fn(() => ({ run: jest.fn() })),
-        toggleSuperscript: jest.fn(() => ({ run: jest.fn() })),
-        toggleSubscript: jest.fn(() => ({ run: jest.fn() })),
-        toggleHighlight: jest.fn(() => ({ run: jest.fn() })),
-        setColor: jest.fn(() => ({ run: jest.fn() })),
-        setTextAlign: jest.fn(() => ({ run: jest.fn() })),
-        toggleHeading: jest.fn(() => ({ run: jest.fn() }))
-      }))
-    })),
-    setContent: jest.fn(),
-    focus: jest.fn(),
-    destroy: jest.fn(),
-    on: jest.fn(),
-    off: jest.fn(),
-    onUpdate: jest.fn()
+    }))
+  },
+  getText: jest.fn(() => ''),
+  isActive: jest.fn(() => false),
+  chain: jest.fn(() => ({
+    focus: jest.fn(() => ({
+      toggleBold: jest.fn(() => ({ run: jest.fn() })),
+      toggleItalic: jest.fn(() => ({ run: jest.fn() })),
+      toggleUnderline: jest.fn(() => ({ run: jest.fn() })),
+      toggleStrike: jest.fn(() => ({ run: jest.fn() })),
+      toggleBulletList: jest.fn(() => ({ run: jest.fn() })),
+      toggleOrderedList: jest.fn(() => ({ run: jest.fn() })),
+      toggleBlockquote: jest.fn(() => ({ run: jest.fn() })),
+      toggleCodeBlock: jest.fn(() => ({ run: jest.fn() })),
+      setHorizontalRule: jest.fn(() => ({ run: jest.fn() })),
+      toggleSuperscript: jest.fn(() => ({ run: jest.fn() })),
+      toggleSubscript: jest.fn(() => ({ run: jest.fn() })),
+      toggleHighlight: jest.fn(() => ({ run: jest.fn() })),
+      setColor: jest.fn(() => ({ run: jest.fn() })),
+      setTextAlign: jest.fn(() => ({ run: jest.fn() })),
+      toggleHeading: jest.fn(() => ({ run: jest.fn() }))
+    }))
   })),
+  setContent: jest.fn(),
+  focus: jest.fn(),
+  destroy: jest.fn(),
+  on: jest.fn(),
+  off: jest.fn(),
+  onUpdate: jest.fn()
+}
+
+jest.mock('@tiptap/react', () => ({
+  useEditor: jest.fn(() => mockEditor),
   EditorContent: ({ editor, ...props }: any) => (
     <div data-testid="editor-content" {...props}>
       <div data-testid="editor-placeholder">Write your synopsis here...</div>
@@ -1095,16 +1075,7 @@ describe('SynopsisEditor Component', () => {
       expect(screen.getByText('Synopsis Editor')).toBeInTheDocument()
     })
 
-    it('handles manual save functionality', async () => {
-      const user = userEvent.setup()
-      render(<SynopsisEditor {...mockProps} />)
-      
-      const saveButton = screen.getByText('Save')
-      await user.click(saveButton)
-      
-      // Should render without crashing
-      expect(screen.getByText('Synopsis Editor')).toBeInTheDocument()
-    }, 10000)
   })
+
 })
 

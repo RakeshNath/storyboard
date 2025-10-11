@@ -16,6 +16,8 @@ describe('Auth Utilities', () => {
   beforeEach(() => {
     jest.clearAllMocks()
     localStorageMock.getItem.mockReturnValue(null)
+    localStorageMock.removeItem.mockClear()
+    localStorageMock.setItem.mockClear()
   })
 
   describe('getUser', () => {
@@ -131,9 +133,21 @@ describe('Auth Utilities', () => {
     })
 
     it('handles localStorage errors gracefully', () => {
-      localStorageMock.getItem.mockReturnValue(null)
+      // Set up a user in localStorage first
+      const mockUser = { id: '1', name: 'John Doe', theme: 'light' }
+      localStorageMock.getItem.mockReturnValue(JSON.stringify(mockUser))
       
-      expect(() => updateUserTheme('dark')).not.toThrow()
+      // Mock localStorage.setItem to throw an error
+      localStorageMock.setItem.mockImplementation(() => {
+        throw new Error('localStorage error')
+      })
+      
+      // Suppress console.error for this test since we expect an error
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {})
+      
+      expect(() => updateUserTheme('dark')).toThrow('localStorage error')
+      
+      consoleSpy.mockRestore()
     })
   })
 
@@ -222,5 +236,37 @@ describe('Auth Utilities', () => {
       
       expect(user).toEqual(userWithNulls)
     })
+  })
+
+  describe('Server-Side Rendering (SSR)', () => {
+    it('getUser returns null when window is undefined (SSR)', () => {
+      // Mock window as undefined (server-side)
+      const originalWindow = global.window
+      // @ts-ignore
+      delete global.window
+      
+      const user = getUser()
+      
+      expect(user).toBeNull()
+      
+      // Restore window
+      global.window = originalWindow
+    })
+
+    it('updateUserTheme returns early when window is undefined (SSR)', () => {
+      // Mock window as undefined (server-side)
+      const originalWindow = global.window
+      // @ts-ignore
+      delete global.window
+      
+      // Should not throw and should not call localStorage
+      expect(() => updateUserTheme('dark')).not.toThrow()
+      expect(localStorageMock.setItem).not.toHaveBeenCalled()
+      
+      // Restore window
+      global.window = originalWindow
+    })
+
+
   })
 })

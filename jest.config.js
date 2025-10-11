@@ -27,7 +27,20 @@ const customJestConfig = {
     '!**/playground-content.tsx', // Exclude playground from coverage
     '!**/playground/**', // Exclude any playground directory
   ],
-
+  
+  // Enhanced debugging and monitoring
+  verbose: false, // Set to false for faster runs, use --verbose flag when needed
+  detectLeaks: false, // Skip in development for speed
+  detectOpenHandles: false, // Skip in development for speed
+  forceExit: true,
+  maxWorkers: '100%', // Use all CPU cores for maximum speed
+  
+  // Coverage reporting
+  coverageReporters: ['text', 'lcov', 'html', 'json'],
+  coverageDirectory: 'coverage',
+  
+  // Test reporting
+  reporters: ['default'],
 
   coverageThreshold: {
     global: {

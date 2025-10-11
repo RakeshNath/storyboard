@@ -103,4 +103,41 @@ describe('Theme Utilities', () => {
       expect(mockRoot.style.setProperty).not.toHaveBeenCalled()
     })
   })
+
+  describe('Server-Side Rendering (SSR)', () => {
+    it('loadTheme returns default when window is undefined (SSR)', () => {
+      // Mock window as undefined (server-side)
+      const originalWindow = global.window
+      // @ts-ignore
+      global.window = undefined
+      
+      const theme = loadTheme()
+      
+      expect(theme).toBe('professional')
+      
+      // Restore window
+      global.window = originalWindow
+    })
+
+    it('applyThemeToDocument does nothing when window is undefined (SSR)', () => {
+      // Mock window as undefined (server-side)
+      const originalWindow = global.window
+      // @ts-ignore
+      global.window = undefined
+      
+      const mockColors = {
+        primary: '#000000',
+        secondary: '#ffffff',
+        background: '#f0f0f0',
+        foreground: '#333333',
+        accent: '#ff0000'
+      }
+      
+      // Should not throw and should not call document methods
+      expect(() => applyThemeToDocument(mockColors)).not.toThrow()
+      
+      // Restore window
+      global.window = originalWindow
+    })
+  })
 })

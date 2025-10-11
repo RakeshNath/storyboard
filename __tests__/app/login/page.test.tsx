@@ -3,10 +3,11 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import LoginPage from '@/app/login/page'
 
-// Mock next/navigation
+// Mock router with spy
+const mockPush = jest.fn()
 jest.mock('next/navigation', () => ({
   useRouter: () => ({
-    push: jest.fn(),
+    push: mockPush,
     replace: jest.fn(),
     prefetch: jest.fn(),
   }),
@@ -22,8 +23,22 @@ jest.mock('@/lib/auth', () => ({
 }))
 
 describe('LoginPage Component', () => {
+  // Mock localStorage
+  const localStorageMock = {
+    getItem: jest.fn(),
+    setItem: jest.fn(),
+    removeItem: jest.fn(),
+    clear: jest.fn(),
+  }
+  
   beforeEach(() => {
     jest.clearAllMocks()
+    mockPush.mockClear()
+    Object.defineProperty(window, 'localStorage', {
+      value: localStorageMock,
+      writable: true,
+    })
+    localStorageMock.setItem.mockClear()
   })
 
   it('renders login form with title and description', () => {
@@ -181,5 +196,169 @@ describe('LoginPage Component', () => {
     if (rememberMeCheckbox) {
       expect(rememberMeCheckbox).toBeInTheDocument()
     }
+  })
+
+  describe('Authentication Flow', () => {
+    beforeEach(() => {
+      jest.useFakeTimers()
+    })
+
+    afterEach(() => {
+      jest.useRealTimers()
+    })
+
+    it('successfully logs in with regular credentials', async () => {
+      const user = userEvent.setup({ delay: null })
+      render(<LoginPage />)
+      
+      const emailInput = screen.getByLabelText(/Email/i)
+      const passwordInput = screen.getByLabelText(/Password/i)
+      const submitButton = screen.getByRole('button', { name: /Sign in/i })
+      
+      await user.clear(emailInput)
+      await user.type(emailInput, 'user@example.com')
+      await user.clear(passwordInput)
+      await user.type(passwordInput, 'password123')
+      await user.click(submitButton)
+      
+      // Fast forward the setTimeout
+      jest.advanceTimersByTime(500)
+      
+      // Should save user data to localStorage
+      await waitFor(() => {
+        expect(localStorageMock.setItem).toHaveBeenCalledWith(
+          'user',
+          expect.stringContaining('user@example.com')
+        )
+      })
+      
+      // Should navigate to dashboard
+      expect(mockPush).toHaveBeenCalledWith('/dashboard')
+    })
+
+    it('successfully logs in with test credentials in test environment', async () => {
+      const user = userEvent.setup({ delay: null })
+      render(<LoginPage />)
+      
+      const emailInput = screen.getByLabelText(/Email/i)
+      const passwordInput = screen.getByLabelText(/Password/i)
+      const submitButton = screen.getByRole('button', { name: /Sign in/i })
+      
+      await user.clear(emailInput)
+      await user.type(emailInput, 'test@storyboard.test')
+      await user.clear(passwordInput)
+      await user.type(passwordInput, 'testpassword123')
+      await user.click(submitButton)
+      
+      // Fast forward the setTimeout
+      jest.advanceTimersByTime(500)
+      
+      // Should save test user data to localStorage
+      await waitFor(() => {
+        expect(localStorageMock.setItem).toHaveBeenCalledWith(
+          'user',
+          expect.stringContaining('Test User')
+        )
+      })
+      
+      // Should navigate to dashboard
+      expect(mockPush).toHaveBeenCalledWith('/dashboard')
+    })
+
+    it('handles localStorage error gracefully', async () => {
+      const user = userEvent.setup({ delay: null })
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation()
+      
+      // Mock localStorage to throw error
+      localStorageMock.setItem.mockImplementation(() => {
+        throw new Error('localStorage is full')
+      })
+      
+      render(<LoginPage />)
+      
+      const emailInput = screen.getByLabelText(/Email/i)
+      const passwordInput = screen.getByLabelText(/Password/i)
+      const submitButton = screen.getByRole('button', { name: /Sign in/i })
+      
+      await user.clear(emailInput)
+      await user.type(emailInput, 'user@example.com')
+      await user.clear(passwordInput)
+      await user.type(passwordInput, 'password123')
+      await user.click(submitButton)
+      
+      // Fast forward the setTimeout
+      jest.advanceTimersByTime(500)
+      
+      // Should log error
+      await waitFor(() => {
+        expect(consoleErrorSpy).toHaveBeenCalledWith('Login failed:', expect.any(Error))
+      })
+      
+      // Should NOT navigate on error
+      expect(mockPush).not.toHaveBeenCalled()
+      
+      consoleErrorSpy.mockRestore()
+    })
+
+    it('shows alert for test credentials in non-test environment', async () => {
+      // Save original env
+      const originalEnv = process.env.NODE_ENV
+      const originalAppEnv = process.env.NEXT_PUBLIC_APP_ENV
+      
+      // Set to non-test environment
+      process.env.NODE_ENV = 'production'
+      delete process.env.NEXT_PUBLIC_APP_ENV
+      
+      const alertSpy = jest.spyOn(window, 'alert').mockImplementation()
+      const user = userEvent.setup({ delay: null })
+      render(<LoginPage />)
+      
+      const emailInput = screen.getByLabelText(/Email/i)
+      const passwordInput = screen.getByLabelText(/Password/i)
+      const submitButton = screen.getByRole('button', { name: /Sign in/i })
+      
+      await user.clear(emailInput)
+      await user.type(emailInput, 'test@storyboard.test')
+      await user.clear(passwordInput)
+      await user.type(passwordInput, 'testpassword123')
+      await user.click(submitButton)
+      
+      // Should show alert immediately (before setTimeout)
+      await waitFor(() => {
+        expect(alertSpy).toHaveBeenCalledWith('Test credentials are only valid in test environment')
+      })
+      
+      // Should NOT navigate
+      jest.advanceTimersByTime(500)
+      expect(mockPush).not.toHaveBeenCalled()
+      
+      // Restore
+      process.env.NODE_ENV = originalEnv
+      if (originalAppEnv) {
+        process.env.NEXT_PUBLIC_APP_ENV = originalAppEnv
+      }
+      alertSpy.mockRestore()
+    })
+
+    it('shows loading state during login', async () => {
+      const user = userEvent.setup({ delay: null })
+      render(<LoginPage />)
+      
+      const submitButton = screen.getByRole('button', { name: /Sign in/i })
+      
+      // Click submit
+      await user.click(submitButton)
+      
+      // Should show loading text
+      expect(screen.getByText('Signing in...')).toBeInTheDocument()
+      
+      // Fast forward the setTimeout
+      jest.advanceTimersByTime(500)
+      
+      // Should return to normal state
+      await waitFor(() => {
+        expect(screen.getByText('Sign In')).toBeInTheDocument()
+      })
+    })
   })
 })

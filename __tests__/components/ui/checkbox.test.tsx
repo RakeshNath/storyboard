@@ -102,14 +102,16 @@ describe('Checkbox Component', () => {
     render(<Checkbox disabled />)
     
     const checkbox = screen.getByTestId('checkbox-root')
-    expect(checkbox).toBeDisabled()
+    // Radix UI sets disabled attribute when the component is disabled
+    expect(checkbox).toHaveAttribute('disabled')
   })
 
   it('handles required state', () => {
     render(<Checkbox required />)
     
     const checkbox = screen.getByTestId('checkbox-root')
-    expect(checkbox).toBeRequired()
+    expect(checkbox).toHaveAttribute('required', '')
+    expect(checkbox).toHaveAttribute('aria-required', 'true')
   })
 
   it('handles onChange event', async () => {
@@ -176,7 +178,8 @@ describe('Checkbox Component', () => {
     render(<Checkbox checked="indeterminate" />)
     
     const checkbox = screen.getByTestId('checkbox-root')
-    expect(checkbox).toHaveAttribute('checked', 'indeterminate')
+    // Radix UI sets aria-checked to "mixed" for indeterminate state
+    expect(checkbox).toHaveAttribute('aria-checked', 'mixed')
   })
 
   it('forwards ref correctly', () => {

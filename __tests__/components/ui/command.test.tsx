@@ -1,5 +1,6 @@
 import React from 'react'
 import { render, screen } from '@testing-library/react'
+import '@testing-library/jest-dom'
 import { 
   Command,
   CommandDialog,
@@ -12,39 +13,60 @@ import {
   CommandSeparator
 } from '@/components/ui/command'
 
-// Mock cmdk
-jest.mock('cmdk', () => ({
-  Command: ({ children, className, ...props }: any) => (
-    <div data-testid="command" className={className} {...props}>
+// Mock cmdk with proper nested structure
+jest.mock('cmdk', () => {
+  const MockComponent = ({ children, className, ...props }: any) => (
+    <div className={className} {...props}>
       {children}
     </div>
-  ),
-  Input: ({ className, ...props }: any) => (
+  )
+  
+  const MockInput = ({ className, ...props }: any) => (
     <input data-testid="command-input" className={className} {...props} />
-  ),
-  List: ({ children, className, ...props }: any) => (
+  )
+  
+  const MockSeparator = ({ className, ...props }: any) => (
+    <div data-testid="command-separator" className={className} {...props} />
+  )
+  
+  const MockCommand = ({ children, className, ...props }: any) => (
+    <div role="combobox" data-slot="command" className={className} {...props}>
+      {children}
+    </div>
+  )
+  
+  // Attach nested components to Command
+  MockCommand.Input = MockInput
+  MockCommand.List = ({ children, className, ...props }: any) => (
     <div data-testid="command-list" className={className} {...props}>
       {children}
     </div>
-  ),
-  Empty: ({ children, className, ...props }: any) => (
+  )
+  MockCommand.Empty = ({ children, className, ...props }: any) => (
     <div data-testid="command-empty" className={className} {...props}>
       {children}
     </div>
-  ),
-  Group: ({ children, className, ...props }: any) => (
+  )
+  MockCommand.Group = ({ children, className, ...props }: any) => (
     <div data-testid="command-group" className={className} {...props}>
       {children}
     </div>
-  ),
-  Item: ({ children, className, ...props }: any) => (
+  )
+  MockCommand.Item = ({ children, className, ...props }: any) => (
     <div data-testid="command-item" className={className} {...props}>
       {children}
     </div>
-  ),
-  Separator: ({ className, ...props }: any) => (
-    <div data-testid="command-separator" className={className} {...props} />
-  ),
+  )
+  MockCommand.Separator = MockSeparator
+  
+  return {
+    Command: MockCommand,
+  }
+})
+
+// Mock lucide-react
+jest.mock('lucide-react', () => ({
+  SearchIcon: () => <div data-testid="search-icon">Search</div>,
 }))
 
 // Mock Dialog components
@@ -76,19 +98,13 @@ jest.mock('@/components/ui/dialog', () => ({
   ),
 }))
 
-// Mock Lucide React icons
-jest.mock('lucide-react', () => ({
-  SearchIcon: ({ className, ...props }: any) => (
-    <div data-testid="search-icon" className={className} {...props} />
-  ),
-}))
 
 describe('Command Components', () => {
   describe('Command', () => {
     it('renders with default props', () => {
       render(<Command />)
       
-      const command = screen.getByTestId('command')
+      const command = screen.getByRole('combobox')
       expect(command).toBeInTheDocument()
       expect(command).toHaveAttribute('data-slot', 'command')
       expect(command).toHaveClass('bg-popover', 'text-popover-foreground', 'flex', 'h-full', 'w-full', 'flex-col')
@@ -97,7 +113,7 @@ describe('Command Components', () => {
     it('renders with custom className', () => {
       render(<Command className="custom-command" />)
       
-      const command = screen.getByTestId('command')
+      const command = screen.getByRole('combobox')
       expect(command).toHaveClass('custom-command')
     })
 
@@ -123,12 +139,12 @@ describe('Command Components', () => {
     it('renders with default props', () => {
       render(<CommandDialog />)
       
-      expect(screen.getByTestId('dialog')).toBeInTheDocument()
+      expect(screen.getByTestId('command-dialog')).toBeInTheDocument()
       expect(screen.getByTestId('dialog-content')).toBeInTheDocument()
       expect(screen.getByTestId('dialog-header')).toBeInTheDocument()
       expect(screen.getByTestId('dialog-title')).toHaveTextContent('Command Palette')
       expect(screen.getByTestId('dialog-description')).toHaveTextContent('Search for a command to run...')
-      expect(screen.getByTestId('command')).toBeInTheDocument()
+      expect(screen.getByRole('combobox')).toBeInTheDocument()
     })
 
     it('renders with custom title and description', () => {
@@ -153,8 +169,8 @@ describe('Command Components', () => {
     it('renders with showCloseButton false', () => {
       render(<CommandDialog showCloseButton={false} />)
       
-      const dialogContent = screen.getByTestId('dialog-content')
-      expect(dialogContent).toHaveAttribute('showCloseButton', 'false')
+      const dialog = screen.getByTestId('command-dialog')
+      expect(dialog).toHaveAttribute('showclosebutton', 'false')
     })
 
     it('renders children', () => {
@@ -401,7 +417,7 @@ describe('Command Components', () => {
         </Command>
       )
       
-      expect(screen.getByTestId('command')).toBeInTheDocument()
+      expect(screen.getByRole('combobox')).toBeInTheDocument()
       expect(screen.getByTestId('command-input')).toBeInTheDocument()
       expect(screen.getByTestId('command-list')).toBeInTheDocument()
       expect(screen.getByTestId('command-group')).toBeInTheDocument()
@@ -427,7 +443,7 @@ describe('Command Components', () => {
         </CommandDialog>
       )
       
-      expect(screen.getByTestId('dialog')).toBeInTheDocument()
+      expect(screen.getByTestId('command-dialog')).toBeInTheDocument()
       expect(screen.getByTestId('dialog-title')).toHaveTextContent('Search')
       expect(screen.getByTestId('dialog-description')).toHaveTextContent('Find what you need')
       expect(screen.getByTestId('command-input')).toBeInTheDocument()
