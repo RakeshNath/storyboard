@@ -69,7 +69,7 @@ export default function LoginPage() {
                   alt="StoryBoard Logo"
                   width={160}
                   height={48}
-                  className="max-w-full h-auto"
+                  style={{ width: "auto", height: "auto", maxWidth: "100%" }}
                   priority
                 />
           </div>

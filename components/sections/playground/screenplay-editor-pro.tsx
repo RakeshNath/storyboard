@@ -20,7 +20,9 @@ import {
   ChevronRight,
   ChevronDown,
   Users,
-  MapPin
+  MapPin,
+  Edit3,
+  Download
 } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
@@ -28,6 +30,9 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 
 // Get next element type based on current type and key press
 const getNextElementType = (
@@ -85,6 +90,9 @@ const getNextElementType = (
   return null
 }
 
+// Define CustomEditor type
+type CustomEditor = Editor & ReactEditor
+
 // Custom plugin to handle screenplay formatting
 const withScreenplay = (editor: CustomEditor) => {
   const { insertBreak, deleteBackward, insertText } = editor
@@ -129,7 +137,7 @@ const withScreenplay = (editor: CustomEditor) => {
     insertBreak()
   }
 
-  editor.insertText = (text) => {
+  editor.insertText = (text: string) => {
     const { selection } = editor
     
     // Auto-detect scene headings
@@ -170,7 +178,7 @@ const withScreenplay = (editor: CustomEditor) => {
     insertText(text)
   }
 
-  editor.deleteBackward = (...args) => {
+  editor.deleteBackward = (unit: 'character' | 'word' | 'line' | 'block') => {
     const { selection } = editor
 
     if (selection && selection.anchor.offset === 0) {
@@ -197,7 +205,7 @@ const withScreenplay = (editor: CustomEditor) => {
     }
 
     // Default behavior
-    deleteBackward(...args)
+    deleteBackward(unit)
   }
 
   return editor
@@ -231,6 +239,7 @@ interface CharacterData {
 interface LocationData {
   name: string
   scenes: number[]
+  timeOfDay: Record<string, number>
 }
 
 export function ScreenplayEditorPro({ title = 'Untitled Screenplay' }: ScreenplayEditorProProps = {}) {
@@ -240,11 +249,15 @@ export function ScreenplayEditorPro({ title = 'Untitled Screenplay' }: Screenpla
   const [showLocations, setShowLocations] = useState(false)
   const [showOutliner, setShowOutliner] = useState(true)
   const [showExportMenu, setShowExportMenu] = useState(false)
+  const [showCharacterExportMenu, setShowCharacterExportMenu] = useState(false)
+  const [showLocationExportMenu, setShowLocationExportMenu] = useState(false)
   const [scenes, setScenes] = useState<{ id: string; text: string; lineNumber: number }[]>([])
   const [characters, setCharacters] = useState<{ name: string; appearances: number; firstLine: number }[]>([])
   const [characterDetails, setCharacterDetails] = useState<CharacterData[]>([])
   const [locations, setLocations] = useState<LocationData[]>([])
   const [characterProfiles, setCharacterProfiles] = useState<Record<string, string>>({})
+  const [characterTypes, setCharacterTypes] = useState<Record<string, string>>({})
+  const [locationProfiles, setLocationProfiles] = useState<Record<string, string>>({})
   const [currentElementType, setCurrentElementType] = useState<ScreenplayElementType>('action')
   const [autocompleteOptions, setAutocompleteOptions] = useState<string[]>([])
   const [showAutocomplete, setShowAutocomplete] = useState(false)
@@ -375,18 +388,24 @@ export function ScreenplayEditorPro({ title = 'Untitled Screenplay' }: Screenpla
         const sceneText = Node.string(node).trim()
         
         // Parse scene heading: INT./EXT. LOCATION - TIME
-        const match = sceneText.match(/^(INT\.|EXT\.|INT\/EXT\.|EXT\/INT\.)\s+(.+?)\s+-\s+/i)
-        if (match && match[2]) {
+        const match = sceneText.match(/^(INT\.?|EXT\.?|INT\.?\/EXT\.?|EXT\.?\/INT\.?)\s+(.+?)\s+-\s+(.+)$/i)
+        if (match && match[2] && match[3]) {
           const location = match[2].trim().toUpperCase()
+          const timeOfDay = match[3].trim().toUpperCase()
           
           if (!locationMap.has(location)) {
             locationMap.set(location, {
               name: location,
-              scenes: []
+              scenes: [],
+              timeOfDay: {}
             })
           }
           
-          locationMap.get(location)!.scenes.push(sceneNumber)
+          const locationData = locationMap.get(location)!
+          locationData.scenes.push(sceneNumber)
+          
+          // Count time of day occurrences
+          locationData.timeOfDay[timeOfDay] = (locationData.timeOfDay[timeOfDay] || 0) + 1
         }
       }
     })
@@ -840,14 +859,7 @@ ${''.padStart(40)}${authorName}
               INT. LOCATION - DAY (use Tab to navigate)
             </span>
           )}
-          <div className="relative">
-            {children}
-            {!isEmpty && (
-              <span className="absolute right-0 top-0 text-xs text-muted-foreground/0 group-hover:text-muted-foreground/100 transition-all pointer-events-none">
-                Press Tab to move between parts
-              </span>
-            )}
-          </div>
+          {children}
         </div>
       )
     }
@@ -1161,6 +1173,88 @@ ${''.padStart(40)}${authorName}
     ReactEditor.focus(editor)
   }, [editor])
 
+  // Rename character throughout screenplay
+  const renameCharacter = useCallback((oldName: string, newName: string) => {
+    if (!newName.trim() || oldName === newName) return
+    
+    const newNameUpper = newName.trim().toUpperCase()
+    const oldNameUpper = oldName.trim().toUpperCase()
+    
+    console.log(`Renaming character from ${oldNameUpper} to ${newNameUpper}`)
+    
+    // Create a new value array with updated character names
+    const updatedValue = value.map((node, index) => {
+      if (SlateElement.isElement(node) && node.type === 'character') {
+        const currentName = Node.string(node).trim().toUpperCase()
+        if (currentName === oldNameUpper) {
+          // Return a new node with the updated name
+          return {
+            type: 'character',
+            children: [{ text: newNameUpper }],
+          } as CustomElement
+        }
+      }
+      return node
+    })
+    
+    // Update the editor value
+    setValue(updatedValue)
+    
+    // Update character profiles mapping
+    if (characterProfiles[oldNameUpper]) {
+      const profile = characterProfiles[oldNameUpper]
+      setCharacterProfiles(prev => {
+        const newProfiles = { ...prev }
+        delete newProfiles[oldNameUpper]
+        newProfiles[newNameUpper] = profile
+        return newProfiles
+      })
+    }
+    
+    console.log(`Successfully renamed character from ${oldNameUpper} to ${newNameUpper}`)
+  }, [value, characterProfiles])
+
+  // Rename location throughout screenplay
+  const renameLocation = useCallback((oldName: string, newName: string) => {
+    if (!newName.trim() || oldName === newName) return
+    
+    const newNameUpper = newName.trim().toUpperCase()
+    const oldNameUpper = oldName.trim().toUpperCase()
+    
+    console.log(`Renaming location from ${oldNameUpper} to ${newNameUpper}`)
+    
+    // Create a new value array with updated location names in scene headings
+    const updatedValue = value.map((node) => {
+      if (SlateElement.isElement(node) && node.type === 'scene-heading') {
+        const currentText = Node.string(node).trim().toUpperCase()
+        if (currentText.includes(oldNameUpper)) {
+          const updatedText = currentText.replace(oldNameUpper, newNameUpper)
+          return {
+            type: 'scene-heading',
+            children: [{ text: updatedText }],
+          } as CustomElement
+        }
+      }
+      return node
+    })
+    
+    // Update the editor value
+    setValue(updatedValue)
+    
+    // Update location profiles mapping
+    if (locationProfiles[oldNameUpper]) {
+      const profile = locationProfiles[oldNameUpper]
+      setLocationProfiles(prev => {
+        const newProfiles = { ...prev }
+        delete newProfiles[oldNameUpper]
+        newProfiles[newNameUpper] = profile
+        return newProfiles
+      })
+    }
+    
+    console.log(`Successfully renamed location from ${oldNameUpper} to ${newNameUpper}`)
+  }, [value, locationProfiles])
+
   // Get placeholder text based on current element type
   const getPlaceholderText = (elementType: ScreenplayElementType): string => {
     switch (elementType) {
@@ -1188,12 +1282,22 @@ ${''.padStart(40)}${authorName}
         <Button
           variant="ghost"
           size="sm"
-          onClick={() => setShowOutliner(!showOutliner)}
-          title="Toggle Outliner"
+          onClick={() => {
+            if (showCharacters || showLocations || showHelp) {
+              // Return to editor
+              setShowCharacters(false)
+              setShowLocations(false)
+              setShowHelp(false)
+            } else {
+              // Toggle outliner
+              setShowOutliner(!showOutliner)
+            }
+          }}
+          title={showCharacters || showLocations || showHelp ? "Return to Editor" : "Toggle Outliner"}
           className="h-7 px-2 text-xs"
         >
           <List className="h-3 w-3 mr-1" />
-          Outliner
+          {showCharacters || showLocations || showHelp ? 'Editor' : 'Outliner'}
         </Button>
         
         <Separator orientation="vertical" className="h-4" />
@@ -1262,200 +1366,223 @@ ${''.padStart(40)}${authorName}
 
       {/* Main Content Area */}
       <div className="flex-1 flex overflow-hidden">
-        {/* Scene Outliner & Characters Panel */}
-        {showOutliner && (
+        {/* Scene Outliner - Hide when viewing Characters/Locations/Help */}
+        {showOutliner && !showCharacters && !showLocations && !showHelp && (
           <Card className="w-64 m-2 p-0 overflow-hidden flex flex-col border">
-            <Tabs defaultValue="scenes" className="flex-1 flex flex-col">
-              <div className="border-b bg-muted/30">
-                <TabsList className="w-full grid grid-cols-2 h-10 bg-transparent p-1">
-                  <TabsTrigger value="scenes" className="text-xs">
-                    Scenes ({scenes.length})
-                  </TabsTrigger>
-                  <TabsTrigger value="characters" className="text-xs">
-                    <Users className="h-3 w-3 mr-1" />
-                    Characters ({characters.length})
-                  </TabsTrigger>
-                </TabsList>
+            <div className="p-3 border-b bg-muted/30 flex items-center justify-between">
+              <h3 className="font-semibold text-sm">Scene Outliner</h3>
+              <p className="text-xs text-muted-foreground">{scenes.length} scene{scenes.length !== 1 ? 's' : ''}</p>
+            </div>
+            <ScrollArea className="flex-1">
+              <div className="p-2">
+                {scenes.length === 0 ? (
+                  <p className="text-sm text-muted-foreground p-2">
+                    No scenes yet. Type a scene heading to get started.
+                  </p>
+                ) : (
+                  scenes.map((scene, index) => (
+                    <button
+                      key={scene.id}
+                      onClick={() => navigateToScene(scene.lineNumber)}
+                      className="w-full text-left p-2 rounded hover:bg-accent text-sm transition-colors"
+                    >
+                      <div className="flex items-start gap-2">
+                        <ChevronRight className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium truncate">
+                            Scene {index + 1}
+                          </div>
+                          <div className="text-xs text-muted-foreground truncate uppercase font-semibold">
+                            {scene.text.toUpperCase()}
+                          </div>
+                        </div>
+                      </div>
+                    </button>
+                  ))
+                )}
               </div>
-              
-              <TabsContent value="scenes" className="flex-1 m-0 overflow-hidden">
-                <ScrollArea className="h-full">
-                  <div className="p-2">
-                    {scenes.length === 0 ? (
-                      <p className="text-sm text-muted-foreground p-2">
-                        No scenes yet. Type a scene heading to get started.
-                      </p>
-                    ) : (
-                      scenes.map((scene, index) => (
-                        <button
-                          key={scene.id}
-                          onClick={() => navigateToScene(scene.lineNumber)}
-                          className="w-full text-left p-2 rounded hover:bg-accent text-sm transition-colors"
-                        >
-                          <div className="flex items-start gap-2">
-                            <ChevronRight className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                            <div className="flex-1 min-w-0">
-                              <div className="font-medium truncate">
-                                Scene {index + 1}
-                              </div>
-                              <div className="text-xs text-muted-foreground truncate uppercase font-semibold">
-                                {scene.text.toUpperCase()}
-                              </div>
-                            </div>
-                          </div>
-                        </button>
-                      ))
-                    )}
-                  </div>
-                </ScrollArea>
-              </TabsContent>
-              
-              <TabsContent value="characters" className="flex-1 m-0 overflow-hidden">
-                <ScrollArea className="h-full">
-                  <div className="p-2">
-                    {characters.length === 0 ? (
-                      <p className="text-sm text-muted-foreground p-2">
-                        No characters yet. Press Tab from Action to add a character name.
-                      </p>
-                    ) : (
-                      characters.map((character) => (
-                        <button
-                          key={character.name}
-                          onClick={() => navigateToCharacter(character.firstLine)}
-                          className="w-full text-left p-2 rounded hover:bg-accent text-sm transition-colors"
-                        >
-                          <div className="flex items-start gap-2">
-                            <Users className="h-4 w-4 mt-0.5 flex-shrink-0 text-primary" />
-                            <div className="flex-1 min-w-0">
-                              <div className="font-semibold truncate uppercase">
-                                {character.name}
-                              </div>
-                              <div className="text-xs text-muted-foreground">
-                                {character.appearances} dialogue{character.appearances !== 1 ? 's' : ''}
-                              </div>
-                            </div>
-                          </div>
-                        </button>
-                      ))
-                    )}
-                  </div>
-                </ScrollArea>
-              </TabsContent>
-            </Tabs>
+            </ScrollArea>
           </Card>
         )}
 
         {/* Editor */}
-        <div className="flex-1 flex flex-col overflow-hidden m-2 gap-2">
-          {/* Quick Help Bar and Export Panel - Same Row */}
-          <div className="flex flex-wrap gap-2">
-            {/* Quick Help Bar */}
-            <Card className="flex-1 px-3 py-1 bg-muted/30 min-w-[300px] flex items-center">
-              <div className="flex items-center gap-3 text-xs w-full leading-none">
-                <span className="font-semibold text-[10px]">Quick Actions:</span>
-                {currentElementType === 'scene-heading' && (
-                  <span>Press <kbd className="px-1.5 py-0.5 bg-background rounded border">Enter</kbd> to add Action</span>
-                )}
-                {currentElementType === 'action' && (
-                  <span>
-                    <kbd className="px-1.5 py-0.5 bg-background rounded border">Tab</kbd> for Character | 
-                    <kbd className="px-1.5 py-0.5 bg-background rounded border ml-1">Shift+Tab</kbd> for Scene Heading | 
-                    Type <kbd className="px-1.5 py-0.5 bg-background rounded border ml-1">INT.</kbd> or <kbd className="px-1.5 py-0.5 bg-background rounded border">EXT.</kbd> to auto-convert
-                  </span>
-                )}
-                {currentElementType === 'character' && (
-                  <span>Press <kbd className="px-1.5 py-0.5 bg-background rounded border">Enter</kbd> to add Dialogue</span>
-                )}
-                {currentElementType === 'dialogue' && (
-                  <span>Press <kbd className="px-1.5 py-0.5 bg-background rounded border">Tab</kbd> for Parenthetical or <kbd className="px-1.5 py-0.5 bg-background rounded border">Enter</kbd> for Action</span>
-                )}
-                {currentElementType === 'parenthetical' && (
-                  <span>Press <kbd className="px-1.5 py-0.5 bg-background rounded border">Enter</kbd> to return to Dialogue</span>
-                )}
-                {currentElementType === 'transition' && (
-                  <span>Press <kbd className="px-1.5 py-0.5 bg-background rounded border">Enter</kbd> to add Action</span>
-                )}
-              </div>
-            </Card>
-            
-            {/* Export Panel */}
-            <Card className="px-1.5 py-1 bg-muted/30 flex-shrink-0 flex items-center">
-              <div className="flex items-center leading-none">
-                <div className="relative">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    title="Export Screenplay"
-                    className="h-5 px-1 text-[10px] gap-0.5"
-                    onClick={() => setShowExportMenu(!showExportMenu)}
-                  >
-                    <FileDown className="h-2.5 w-2.5" />
-                    Export
-                    <ChevronDown className="h-2 w-2" />
-                  </Button>
-                  
-                  {showExportMenu && (
-                    <>
-                      <div 
-                        className="fixed inset-0 z-40" 
-                        onClick={() => setShowExportMenu(false)}
-                      />
-                      <div className="absolute right-0 top-full mt-1 w-56 bg-popover text-popover-foreground rounded-md border shadow-lg z-50">
-                        <div className="p-2">
-                          <div className="px-2 py-1.5 text-sm font-medium">Export Options</div>
-                          <div className="my-1 h-px bg-border" />
-                          
-                          <button
-                            onClick={() => {
-                              handleExportFormatted()
-                              setShowExportMenu(false)
-                            }}
-                            className="w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded-sm hover:bg-accent hover:text-accent-foreground cursor-pointer"
-                          >
-                            <FileDown className="h-3.5 w-3.5" />
-                            Text File (.txt)
-                          </button>
-                          
-                          <button
-                            onClick={() => {
-                              handleExportPDF()
-                              setShowExportMenu(false)
-                            }}
-                            className="w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded-sm hover:bg-accent hover:text-accent-foreground cursor-pointer"
-                          >
-                            <FileDown className="h-3.5 w-3.5" />
-                            PDF Document (.pdf)
-                          </button>
-                          
-                          <div className="my-1 h-px bg-border" />
-                          
-                          <button
-                            disabled
-                            className="w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded-sm opacity-50 cursor-not-allowed"
-                          >
-                            <FileDown className="h-3.5 w-3.5" />
-                            Final Draft (.fdx) (Coming Soon)
-                          </button>
-                        </div>
-                      </div>
-                    </>
+        <div className={`flex-1 flex flex-col overflow-hidden ${(showCharacters || showLocations || showHelp) ? '' : 'm-2 gap-2'}`}>
+          {/* Quick Help Bar and Export Panel - Only show when in editor mode */}
+          {!showCharacters && !showLocations && !showHelp && (
+            <div className="flex flex-wrap gap-2">
+              {/* Quick Help Bar */}
+              <Card className="flex-1 px-3 py-1 bg-muted/30 min-w-[300px] flex items-center">
+                <div className="flex items-center gap-3 text-xs w-full leading-none">
+                  <span className="font-semibold text-[10px]">Quick Actions:</span>
+                  {currentElementType === 'scene-heading' && (
+                    <span>Press <kbd className="px-1.5 py-0.5 bg-background rounded border">Enter</kbd> to add Action</span>
+                  )}
+                  {currentElementType === 'action' && (
+                    <span>
+                      <kbd className="px-1.5 py-0.5 bg-background rounded border">Tab</kbd> for Character | 
+                      <kbd className="px-1.5 py-0.5 bg-background rounded border ml-1">Shift+Tab</kbd> for Scene Heading | 
+                      Type <kbd className="px-1.5 py-0.5 bg-background rounded border ml-1">INT.</kbd> or <kbd className="px-1.5 py-0.5 bg-background rounded border">EXT.</kbd> to auto-convert
+                    </span>
+                  )}
+                  {currentElementType === 'character' && (
+                    <span>Press <kbd className="px-1.5 py-0.5 bg-background rounded border">Enter</kbd> to add Dialogue</span>
+                  )}
+                  {currentElementType === 'dialogue' && (
+                    <span>Press <kbd className="px-1.5 py-0.5 bg-background rounded border">Tab</kbd> for Parenthetical or <kbd className="px-1.5 py-0.5 bg-background rounded border">Enter</kbd> for Action</span>
+                  )}
+                  {currentElementType === 'parenthetical' && (
+                    <span>Press <kbd className="px-1.5 py-0.5 bg-background rounded border">Enter</kbd> to return to Dialogue</span>
+                  )}
+                  {currentElementType === 'transition' && (
+                    <span>Press <kbd className="px-1.5 py-0.5 bg-background rounded border">Enter</kbd> to add Action</span>
                   )}
                 </div>
-              </div>
-            </Card>
-          </div>
+              </Card>
+              
+              {/* Export Panel */}
+              <Card className="px-1.5 py-1 bg-muted/30 flex-shrink-0 flex items-center">
+                <div className="flex items-center leading-none">
+                  <div className="relative">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      title="Export Screenplay"
+                      className="h-5 px-1 text-[10px] gap-0.5"
+                      onClick={() => setShowExportMenu(!showExportMenu)}
+                    >
+                      <FileDown className="h-2.5 w-2.5" />
+                      Export
+                      <ChevronDown className="h-2 w-2" />
+                    </Button>
+                    
+                    {showExportMenu && (
+                      <>
+                        <div 
+                          className="fixed inset-0 z-40" 
+                          onClick={() => setShowExportMenu(false)}
+                        />
+                        <div className="absolute right-0 top-full mt-1 w-56 bg-popover text-popover-foreground rounded-md border shadow-lg z-50">
+                          <div className="p-2">
+                            <div className="px-2 py-1.5 text-sm font-medium">Export Options</div>
+                            <div className="my-1 h-px bg-border" />
+                            
+                            <button
+                              onClick={() => {
+                                handleExportFormatted()
+                                setShowExportMenu(false)
+                              }}
+                              className="w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded-sm hover:bg-accent hover:text-accent-foreground cursor-pointer"
+                            >
+                              <FileDown className="h-3.5 w-3.5" />
+                              Text File (.txt)
+                            </button>
+                            
+                            <button
+                              onClick={() => {
+                                handleExportPDF()
+                                setShowExportMenu(false)
+                              }}
+                              className="w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded-sm hover:bg-accent hover:text-accent-foreground cursor-pointer"
+                            >
+                              <FileDown className="h-3.5 w-3.5" />
+                              PDF Document (.pdf)
+                            </button>
+                            
+                            <div className="my-1 h-px bg-border" />
+                            
+                            <button
+                              disabled
+                              className="w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded-sm opacity-50 cursor-not-allowed"
+                            >
+                              <FileDown className="h-3.5 w-3.5" />
+                              Final Draft (.fdx) (Coming Soon)
+                            </button>
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </Card>
+            </div>
+          )}
           
           <Card className="flex-1 overflow-hidden">
             <ScrollArea className="h-full">
               {showCharacters ? (
                 // Characters Content
-                <div className="p-8 max-w-6xl mx-auto">
+                <div className="p-8 pb-24 max-w-6xl mx-auto">
                   <div className="space-y-6">
-                    <div>
-                      <h2 className="text-2xl font-bold mb-2">Characters</h2>
-                      <p className="text-muted-foreground mb-6">
-                        View all characters, their dialogues, scenes, and editable profiles.
-                      </p>
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <h2 className="text-2xl font-bold mb-2">Characters</h2>
+                        <p className="text-muted-foreground mb-6">
+                          View all characters and their editable profiles.
+                        </p>
+                      </div>
+                      {characterDetails.length > 0 && (
+                        <Card className="px-1.5 py-1 bg-muted/30 flex-shrink-0 flex items-center">
+                          <div className="flex items-center leading-none">
+                            <div className="relative">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                title="Export Characters"
+                                className="h-5 px-1 text-[10px] gap-0.5"
+                                onClick={() => setShowCharacterExportMenu(!showCharacterExportMenu)}
+                              >
+                                <FileDown className="h-2.5 w-2.5" />
+                                Export
+                                <ChevronDown className="h-2 w-2" />
+                              </Button>
+                              
+                              {showCharacterExportMenu && (
+                                <>
+                                  <div 
+                                    className="fixed inset-0 z-40" 
+                                    onClick={() => setShowCharacterExportMenu(false)}
+                                  />
+                                  <div className="absolute right-0 top-full mt-1 w-48 bg-popover border rounded-md shadow-md z-50">
+                                    <div className="p-1">
+                                      <div className="px-2 py-1.5 text-sm font-medium">Export Options</div>
+                                      <div className="my-1 h-px bg-border" />
+                                      
+                                      <button
+                                        onClick={() => {
+                                          const exportData = characterDetails.map((character) => ({
+                                            name: character.name,
+                                            type: characterTypes[character.name] || 'Not Mentioned',
+                                            dialogues: character.appearances,
+                                            scenes: character.scenes.length,
+                                            sceneNumbers: character.scenes,
+                                            profile: characterProfiles[character.name] || '',
+                                            dialogueLines: character.dialogues
+                                          }))
+                                          
+                                          const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' })
+                                          const url = URL.createObjectURL(blob)
+                                          const a = document.createElement('a')
+                                          a.href = url
+                                          a.download = `${screenplayTitle.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_characters.json`
+                                          document.body.appendChild(a)
+                                          a.click()
+                                          document.body.removeChild(a)
+                                          URL.revokeObjectURL(url)
+                                          setShowCharacterExportMenu(false)
+                                        }}
+                                        className="w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded-sm hover:bg-accent hover:text-accent-foreground cursor-pointer"
+                                      >
+                                        <FileDown className="h-3.5 w-3.5" />
+                                        JSON File (.json)
+                                      </button>
+                                    </div>
+                                  </div>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        </Card>
+                      )}
                     </div>
 
                     {characterDetails.length === 0 ? (
@@ -1464,72 +1591,181 @@ ${''.padStart(40)}${authorName}
                         <p className="text-muted-foreground">No characters yet. Add characters to your screenplay to see them here.</p>
                       </div>
                     ) : (
-                      <div className="space-y-6">
+                      <Accordion type="single" collapsible className="space-y-1.5">
                         {characterDetails.map((character) => (
-                          <Card key={character.name} className="p-6">
-                            <div className="space-y-4">
-                              <div className="flex items-start justify-between">
-                                <div>
-                                  <h3 className="text-xl font-bold">{character.name}</h3>
-                                  <div className="flex gap-2 mt-2">
-                                    <Badge variant="secondary">{character.appearances} dialogues</Badge>
-                                    <Badge variant="secondary">Scenes: {character.scenes.join(', ')}</Badge>
+                          <AccordionItem key={character.name} value={character.name} className="border rounded-lg px-2.5">
+                            <AccordionTrigger className="hover:no-underline py-1">
+                              <div className="flex items-center justify-between w-full pr-1">
+                                <div className="flex items-center gap-1.5">
+                                  <Users className="h-3.5 w-3.5 text-muted-foreground" />
+                                  <span className="font-medium text-xs uppercase tracking-wide">{character.name}</span>
+                                </div>
+                                <div className="flex items-center h-5 rounded-full overflow-hidden border border-border">
+                                  <span className="px-2 py-0.5 bg-primary/10 text-[10px] font-medium">
+                                    {character.appearances} dialogue{character.appearances !== 1 ? 's' : ''}
+                                  </span>
+                                  <div className="w-px h-full bg-border"></div>
+                                  <span className="px-2 py-0.5 bg-secondary/10 text-[10px] font-medium">
+                                    {character.scenes.length} scene{character.scenes.length !== 1 ? 's' : ''}
+                                  </span>
+                                </div>
+                              </div>
+                            </AccordionTrigger>
+                            <AccordionContent className="pt-1 pb-2">
+                              <div className="grid grid-cols-3 gap-6">
+                                <div className="col-span-1 space-y-3">
+                                  <div>
+                                    <label className="text-sm font-semibold mb-2 block text-muted-foreground">
+                                      Edit Character Name:
+                                    </label>
+                                    <div className="flex items-center gap-2">
+                                      <Edit3 className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                                      <Input
+                                        defaultValue={character.name}
+                                        onBlur={(e) => {
+                                          const newName = e.target.value.trim().toUpperCase()
+                                          if (newName && newName !== character.name) {
+                                            renameCharacter(character.name, newName)
+                                          }
+                                        }}
+                                        onKeyDown={(e) => {
+                                          if (e.key === 'Enter') {
+                                            e.currentTarget.blur()
+                                          }
+                                        }}
+                                        className="font-bold border-2 border-dashed border-muted-foreground/30 hover:border-primary/50 focus:border-primary uppercase"
+                                        placeholder="Character Name"
+                                      />
+                                    </div>
+                                  </div>
+                                  <div>
+                                    <label className="text-sm font-semibold mb-2 block text-muted-foreground">
+                                      Character Type:
+                                    </label>
+                                    <Select
+                                      value={characterTypes[character.name] || ''}
+                                      onValueChange={(value) => {
+                                        setCharacterTypes(prev => ({
+                                          ...prev,
+                                          [character.name]: value
+                                        }))
+                                      }}
+                                    >
+                                      <SelectTrigger className="w-full">
+                                        <SelectValue placeholder="Not Mentioned" />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="protagonist">Protagonist</SelectItem>
+                                        <SelectItem value="antagonist">Antagonist</SelectItem>
+                                        <SelectItem value="supporting">Supporting Character</SelectItem>
+                                        <SelectItem value="minor">Minor Character</SelectItem>
+                                        <SelectItem value="love-interest">Love Interest</SelectItem>
+                                        <SelectItem value="mentor">Mentor</SelectItem>
+                                        <SelectItem value="sidekick">Sidekick</SelectItem>
+                                        <SelectItem value="comic-relief">Comic Relief</SelectItem>
+                                        <SelectItem value="foil">Foil</SelectItem>
+                                        <SelectItem value="guest">Guest</SelectItem>
+                                        <SelectItem value="other">Other</SelectItem>
+                                      </SelectContent>
+                                    </Select>
                                   </div>
                                 </div>
-                              </div>
-                              
-                              <div>
-                                <label className="text-sm font-semibold mb-2 block">Character Profile:</label>
-                                <Textarea
-                                  value={characterProfiles[character.name] || ''}
-                                  onChange={(e) => {
-                                    setCharacterProfiles(prev => ({
-                                      ...prev,
-                                      [character.name]: e.target.value
-                                    }))
-                                  }}
-                                  placeholder="Add character description, backstory, traits, etc..."
-                                  className="min-h-[80px]"
-                                />
-                              </div>
-                              
-                              <div>
-                                <h4 className="text-sm font-semibold mb-2">Dialogues ({character.dialogues.length}):</h4>
-                                <div className="space-y-2 max-h-[300px] overflow-y-auto">
-                                  {character.dialogues.slice(0, 10).map((dialogue, idx) => (
-                                    <div key={idx} className="p-3 bg-muted/30 rounded text-sm">
-                                      <p className="text-muted-foreground italic">"{dialogue.text}"</p>
-                                      <button 
-                                        onClick={() => navigateToCharacter(dialogue.lineNumber)}
-                                        className="text-xs text-primary hover:underline mt-1"
-                                      >
-                                        → Go to line {dialogue.lineNumber}
-                                      </button>
-                                    </div>
-                                  ))}
-                                  {character.dialogues.length > 10 && (
-                                    <p className="text-xs text-muted-foreground text-center">
-                                      ...and {character.dialogues.length - 10} more dialogues
-                                    </p>
-                                  )}
+                                <div className="col-span-2">
+                                  <label className="text-sm font-semibold mb-2 block text-muted-foreground">
+                                    Character Profile:
+                                  </label>
+                                  <Textarea
+                                    value={characterProfiles[character.name] || ''}
+                                    onChange={(e) => {
+                                      setCharacterProfiles(prev => ({
+                                        ...prev,
+                                        [character.name]: e.target.value
+                                      }))
+                                    }}
+                                    placeholder="Add character description, backstory, traits, personality, motivations, etc..."
+                                    className="min-h-[200px] w-full"
+                                  />
                                 </div>
                               </div>
-                            </div>
-                          </Card>
+                            </AccordionContent>
+                          </AccordionItem>
                         ))}
-                      </div>
+                      </Accordion>
                     )}
                   </div>
                 </div>
               ) : showLocations ? (
                 // Locations Content
-                <div className="p-8 max-w-4xl mx-auto">
+                <div className="p-8 pb-24 max-w-6xl mx-auto">
                   <div className="space-y-6">
-                    <div>
-                      <h2 className="text-2xl font-bold mb-2">Locations</h2>
-                      <p className="text-muted-foreground mb-6">
-                        All locations used in your screenplay with their scene numbers.
-                      </p>
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <h2 className="text-2xl font-bold mb-2">Locations</h2>
+                        <p className="text-muted-foreground mb-6">
+                          View all locations and their editable details.
+                        </p>
+                      </div>
+                      {locations.length > 0 && (
+                        <Card className="px-1.5 py-1 bg-muted/30 flex-shrink-0 flex items-center">
+                          <div className="flex items-center leading-none">
+                            <div className="relative">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                title="Export Locations"
+                                className="h-5 px-1 text-[10px] gap-0.5"
+                                onClick={() => setShowLocationExportMenu(!showLocationExportMenu)}
+                              >
+                                <FileDown className="h-2.5 w-2.5" />
+                                Export
+                                <ChevronDown className="h-2 w-2" />
+                              </Button>
+                              
+                              {showLocationExportMenu && (
+                                <>
+                                  <div 
+                                    className="fixed inset-0 z-40" 
+                                    onClick={() => setShowLocationExportMenu(false)}
+                                  />
+                                  <div className="absolute right-0 top-full mt-1 w-48 bg-popover border rounded-md shadow-md z-50">
+                                    <div className="p-1">
+                                      <div className="px-2 py-1.5 text-sm font-medium">Export Options</div>
+                                      <div className="my-1 h-px bg-border" />
+                                      
+                                      <button
+                                        onClick={() => {
+                                          const exportData = locations.map((location) => ({
+                                            name: location.name,
+                                            totalScenes: location.scenes.length,
+                                            sceneNumbers: location.scenes,
+                                            timeOfDayBreakdown: location.timeOfDay,
+                                            description: locationProfiles[location.name] || ''
+                                          }))
+                                          
+                                          const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' })
+                                          const url = URL.createObjectURL(blob)
+                                          const a = document.createElement('a')
+                                          a.href = url
+                                          a.download = `${screenplayTitle.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_locations.json`
+                                          document.body.appendChild(a)
+                                          a.click()
+                                          document.body.removeChild(a)
+                                          URL.revokeObjectURL(url)
+                                          setShowLocationExportMenu(false)
+                                        }}
+                                        className="w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded-sm hover:bg-accent hover:text-accent-foreground cursor-pointer"
+                                      >
+                                        <FileDown className="h-3.5 w-3.5" />
+                                        JSON File (.json)
+                                      </button>
+                                    </div>
+                                  </div>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        </Card>
+                      )}
                     </div>
 
                     {locations.length === 0 ? (
@@ -1538,37 +1774,91 @@ ${''.padStart(40)}${authorName}
                         <p className="text-muted-foreground">No locations yet. Add scene headings to see locations here.</p>
                       </div>
                     ) : (
-                      <div className="grid gap-4 md:grid-cols-2">
+                      <Accordion type="single" collapsible className="space-y-1.5">
                         {locations.map((location) => (
-                          <Card key={location.name} className="p-4">
-                            <div className="space-y-3">
-                              <div className="flex items-start gap-3">
-                                <MapPin className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
-                                <div className="flex-1">
-                                  <h3 className="font-bold text-base">{location.name}</h3>
-                                  <div className="flex flex-wrap gap-1 mt-2">
-                                    <span className="text-xs text-muted-foreground">Scenes:</span>
+                          <AccordionItem key={location.name} value={location.name} className="border rounded-lg px-2.5">
+                            <AccordionTrigger className="hover:no-underline py-1">
+                              <div className="flex items-center justify-between w-full pr-1">
+                                <div className="flex items-center gap-1.5">
+                                  <MapPin className="h-3.5 w-3.5 text-muted-foreground" />
+                                  <span className="font-medium text-xs uppercase tracking-wide">{location.name}</span>
+                                </div>
+                                <div className="flex items-center gap-1.5">
+                                  {Object.entries(location.timeOfDay).sort(([a], [b]) => a.localeCompare(b)).map(([time, count]) => (
+                                    <div key={time} className="flex items-center h-5 rounded-full overflow-hidden border border-border">
+                                      <span className="px-2 py-0.5 bg-primary/10 text-[10px] font-medium">
+                                        {count} {time}
+                                      </span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            </AccordionTrigger>
+                            <AccordionContent className="pt-1 pb-2">
+                              <div className="space-y-3">
+                                <div>
+                                  <label className="text-sm font-semibold mb-2 block text-muted-foreground">
+                                    Edit Location Name:
+                                  </label>
+                                  <div className="flex items-center gap-2">
+                                    <Edit3 className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                                    <Input
+                                      defaultValue={location.name}
+                                      onBlur={(e) => {
+                                        const newName = e.target.value.trim().toUpperCase()
+                                        if (newName && newName !== location.name) {
+                                          renameLocation(location.name, newName)
+                                        }
+                                      }}
+                                      onKeyDown={(e) => {
+                                        if (e.key === 'Enter') {
+                                          e.currentTarget.blur()
+                                        }
+                                      }}
+                                      className="font-bold border-2 border-dashed border-muted-foreground/30 hover:border-primary/50 focus:border-primary uppercase"
+                                      placeholder="Location Name"
+                                    />
+                                  </div>
+                                </div>
+                                <div>
+                                  <label className="text-sm font-semibold mb-2 block text-muted-foreground">
+                                    Location Description:
+                                  </label>
+                                  <Textarea
+                                    value={locationProfiles[location.name] || ''}
+                                    onChange={(e) => {
+                                      setLocationProfiles(prev => ({
+                                        ...prev,
+                                        [location.name]: e.target.value
+                                      }))
+                                    }}
+                                    placeholder="Add location description, atmosphere, important details, visual elements, etc..."
+                                    className="min-h-[100px] w-full"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="text-sm font-semibold mb-2 block text-muted-foreground">
+                                    Scene Numbers:
+                                  </label>
+                                  <div className="flex flex-wrap gap-1.5">
                                     {location.scenes.map((sceneNum, idx) => (
-                                      <Badge key={idx} variant="outline" className="text-xs">
-                                        {sceneNum}
+                                      <Badge key={idx} variant="outline" className="text-xs px-2 py-0.5">
+                                        Scene {sceneNum}
                                       </Badge>
                                     ))}
                                   </div>
-                                  <p className="text-xs text-muted-foreground mt-2">
-                                    Appears in {location.scenes.length} scene{location.scenes.length !== 1 ? 's' : ''}
-                                  </p>
                                 </div>
                               </div>
-                            </div>
-                          </Card>
+                            </AccordionContent>
+                          </AccordionItem>
                         ))}
-                      </div>
+                      </Accordion>
                     )}
                   </div>
                 </div>
               ) : showHelp ? (
                 // Help Content
-                <div className="p-8 max-w-4xl mx-auto">
+                <div className="p-8 pb-16 max-w-4xl mx-auto">
                   <div className="space-y-6">
                     <div>
                       <h2 className="text-2xl font-bold mb-4">Screenplay Editor Help</h2>
@@ -1633,6 +1923,26 @@ ${''.padStart(40)}${authorName}
                     editor={editor}
                     initialValue={value}
                     onValueChange={setValue}
+                    onSelectionChange={() => {
+                      // Track current element type when selection changes
+                      const { selection } = editor
+                      if (!selection) return
+
+                      try {
+                        const [match] = Editor.nodes(editor, {
+                          match: n => SlateElement.isElement(n),
+                          at: selection,
+                        })
+
+                        if (match) {
+                          const [node] = match
+                          const element = node as CustomElement
+                          setCurrentElementType(element.type)
+                        }
+                      } catch (error) {
+                        // Ignore errors during selection tracking
+                      }
+                    }}
                   >
                     <Editable
                       renderElement={renderElement}

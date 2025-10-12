@@ -144,7 +144,8 @@ export function DashboardLayout({ user, navigationItems, activeSection, onSectio
                 alt="StoryBoard Logo"
                 width={140}
                 height={42}
-                className="max-w-full h-auto transition-all duration-300"
+                style={{ width: "auto", height: "auto", maxWidth: "100%" }}
+                className="transition-all duration-300"
                 priority
               />
             </div>
