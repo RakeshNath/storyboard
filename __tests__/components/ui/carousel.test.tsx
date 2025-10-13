@@ -730,12 +730,11 @@ describe('Carousel Components', () => {
       expect(mockApi.scrollNext).toHaveBeenCalled()
     })
 
-    it('handles null api gracefully', () => {
-      // Mock embla-carousel-react to return null api
-      jest.doMock('embla-carousel-react', () => ({
-        __esModule: true,
-        default: jest.fn(() => [mockCarouselRef, null]),
-      }))
+    it('handles null api gracefully in onSelect', () => {
+      // Change mock to return undefined api temporarily
+      const emblaCarousel = require('embla-carousel-react')
+      const originalMock = emblaCarousel.default
+      emblaCarousel.default = jest.fn(() => [mockCarouselRef, undefined])
       
       render(
         <Carousel>
@@ -745,7 +744,67 @@ describe('Carousel Components', () => {
         </Carousel>
       )
       
-      // Should render without errors even with null api
+      // Should render without errors even with undefined api
+      expect(screen.getByRole('region')).toBeInTheDocument()
+      
+      // Restore original mock
+      emblaCarousel.default = originalMock
+    })
+
+    it('handles setApi prop when provided', () => {
+      const setApiMock = jest.fn()
+      
+      render(
+        <Carousel setApi={setApiMock}>
+          <CarouselContent>
+            <CarouselItem>Slide 1</CarouselItem>
+          </CarouselContent>
+        </Carousel>
+      )
+      
+      // setApi should be called when api is available
+      expect(screen.getByRole('region')).toBeInTheDocument()
+    })
+
+    it('handles useEffect cleanup when api exists', () => {
+      const { unmount } = render(
+        <Carousel>
+          <CarouselContent>
+            <CarouselItem>Slide 1</CarouselItem>
+          </CarouselContent>
+        </Carousel>
+      )
+      
+      // Unmount to trigger cleanup
+      unmount()
+      
+      // Should call api.off for cleanup
+      expect(mockApi.off).toHaveBeenCalled()
+    })
+
+    it('handles orientation from opts when orientation prop not provided', () => {
+      render(
+        <Carousel opts={{ axis: 'y' }}>
+          <CarouselContent>
+            <CarouselItem>Vertical Slide 1</CarouselItem>
+          </CarouselContent>
+        </Carousel>
+      )
+      
+      // Should use vertical orientation from opts
+      expect(screen.getByRole('region')).toBeInTheDocument()
+    })
+
+    it('handles orientation prop overriding opts', () => {
+      render(
+        <Carousel orientation="horizontal" opts={{ axis: 'y' }}>
+          <CarouselContent>
+            <CarouselItem>Slide 1</CarouselItem>
+          </CarouselContent>
+        </Carousel>
+      )
+      
+      // Should use horizontal orientation from prop
       expect(screen.getByRole('region')).toBeInTheDocument()
     })
   })

@@ -251,15 +251,51 @@ describe('DashboardPage', () => {
     expect(screen.getByTestId('dashboard-layout')).toBeInTheDocument()
   })
 
-  it.skip('handles theme application errors gracefully', () => {
-    // Line 212 is a console.error in a try-catch block
-    // This error path is difficult to test as it requires theme application to fail
-    // The error handling exists and doesn't crash the app
+  it('handles theme application errors and logs error', async () => {
     const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation()
     
-    // Render should work
+    // Mock documentElement.style.setProperty to throw error
+    const originalSetProperty = document.documentElement.style.setProperty
+    Object.defineProperty(document.documentElement.style, 'setProperty', {
+      value: jest.fn(() => {
+        throw new Error('DOM error')
+      }),
+      writable: true,
+      configurable: true,
+    })
+    
     render(<DashboardPage />)
     
+    await waitFor(() => {
+      expect(consoleErrorSpy).toHaveBeenCalledWith('Theme application error:', expect.any(Error))
+    })
+    
+    // Restore
+    Object.defineProperty(document.documentElement.style, 'setProperty', {
+      value: originalSetProperty,
+      writable: true,
+      configurable: true,
+    })
+    consoleErrorSpy.mockRestore()
+  })
+
+  it('handles invalid theme gracefully', async () => {
+    ;(getUserTheme as jest.Mock).mockReturnValue('invalid-theme-id')
+    
+    render(<DashboardPage />)
+    
+    await waitFor(() => {
+      // Should still render even with invalid theme
+      expect(screen.getByTestId('dashboard-layout')).toBeInTheDocument()
+    })
+  })
+
+  it('handles theme application with window undefined check', () => {
+    const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation()
+    
+    render(<DashboardPage />)
+    
+    // Component should render successfully
     expect(screen.getByTestId('dashboard-layout')).toBeInTheDocument()
     
     consoleErrorSpy.mockRestore()

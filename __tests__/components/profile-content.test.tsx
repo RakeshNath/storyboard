@@ -130,7 +130,12 @@ describe('ProfileContent Component', () => {
       
       const inputs = screen.getAllByRole('textbox')
       inputs.forEach(input => {
-        expect(input).not.toBeDisabled()
+        // Pen name field is disabled by default (until customize checkbox is checked)
+        if (input.id === 'penName') {
+          expect(input).toBeDisabled()
+        } else {
+          expect(input).not.toBeDisabled()
+        }
       })
       
       const dateInput = screen.getByDisplayValue('1990-01-01')
@@ -668,6 +673,151 @@ describe('ProfileContent Component', () => {
         expect(userId).toMatch(/^[A-Z0-9]{3}-[A-Z0-9]{3}-[A-Z0-9]{4}$/)
         unmount()
       })
+    })
+  })
+
+  describe('Pen Name Field', () => {
+    it('displays pen name field with default value from first and last name', () => {
+      render(<ProfileContent user={mockUser} />)
+      
+      // Pen name should be "John Doe" by default
+      const penNameInput = screen.getByDisplayValue('John Doe')
+      expect(penNameInput).toBeInTheDocument()
+      expect(penNameInput).toHaveAttribute('id', 'penName')
+    })
+
+    it('pen name field is disabled by default (not editable)', () => {
+      render(<ProfileContent user={mockUser} />)
+      
+      const penNameInput = screen.getByDisplayValue('John Doe')
+      expect(penNameInput).toBeDisabled()
+    })
+
+    it('shows checkbox to customize pen name when in edit mode', async () => {
+      render(<ProfileContent user={mockUser} />)
+      
+      const editButton = screen.getByText('Edit Profile')
+      await user.click(editButton)
+      
+      // Checkbox should appear
+      const checkbox = screen.getByRole('checkbox', { name: /customize pen name/i })
+      expect(checkbox).toBeInTheDocument()
+      expect(checkbox).not.toBeChecked()
+    })
+
+    it('checkbox does not appear when not in edit mode', () => {
+      render(<ProfileContent user={mockUser} />)
+      
+      // Checkbox should not be visible
+      const checkbox = screen.queryByRole('checkbox', { name: /customize pen name/i })
+      expect(checkbox).not.toBeInTheDocument()
+    })
+
+    it('enables pen name editing when checkbox is checked', async () => {
+      render(<ProfileContent user={mockUser} />)
+      
+      const editButton = screen.getByText('Edit Profile')
+      await user.click(editButton)
+      
+      const penNameInput = screen.getByDisplayValue('John Doe')
+      expect(penNameInput).toBeDisabled()
+      
+      // Check the customize checkbox
+      const checkbox = screen.getByRole('checkbox', { name: /customize pen name/i })
+      await user.click(checkbox)
+      
+      // Now pen name should be editable
+      expect(penNameInput).not.toBeDisabled()
+    })
+
+    it('allows editing pen name when customize is enabled', async () => {
+      render(<ProfileContent user={mockUser} />)
+      
+      const editButton = screen.getByText('Edit Profile')
+      await user.click(editButton)
+      
+      // Enable customization
+      const checkbox = screen.getByRole('checkbox', { name: /customize pen name/i })
+      await user.click(checkbox)
+      
+      const penNameInput = screen.getByDisplayValue('John Doe')
+      await user.clear(penNameInput)
+      await user.type(penNameInput, 'J.D. Writer')
+      
+      expect(penNameInput).toHaveValue('J.D. Writer')
+    })
+
+    it('automatically updates pen name when first or last name changes (if not customized)', async () => {
+      render(<ProfileContent user={mockUser} />)
+      
+      const editButton = screen.getByText('Edit Profile')
+      await user.click(editButton)
+      
+      const firstNameInput = screen.getByDisplayValue('John')
+      await user.clear(firstNameInput)
+      await user.type(firstNameInput, 'Jane')
+      
+      // Pen name should update automatically to "Jane Doe"
+      await waitFor(() => {
+        const penNameInput = screen.getByDisplayValue('Jane Doe')
+        expect(penNameInput).toBeInTheDocument()
+      })
+    })
+
+    it('does not auto-update pen name when customized', async () => {
+      render(<ProfileContent user={mockUser} />)
+      
+      const editButton = screen.getByText('Edit Profile')
+      await user.click(editButton)
+      
+      // Enable customization
+      const checkbox = screen.getByRole('checkbox', { name: /customize pen name/i })
+      await user.click(checkbox)
+      
+      const penNameInput = screen.getByDisplayValue('John Doe')
+      await user.clear(penNameInput)
+      await user.type(penNameInput, 'Custom Name')
+      
+      // Change first name
+      const firstNameInput = screen.getByDisplayValue('John')
+      await user.clear(firstNameInput)
+      await user.type(firstNameInput, 'Jane')
+      
+      // Pen name should remain "Custom Name"
+      await waitFor(() => {
+        expect(penNameInput).toHaveValue('Custom Name')
+      })
+    })
+
+    it('shows explanatory text when pen name is not customized', () => {
+      render(<ProfileContent user={mockUser} />)
+      
+      const helpText = screen.getByText(/automatically generated from your first and last name/i)
+      expect(helpText).toBeInTheDocument()
+    })
+
+    it('applies muted styling to pen name field when not customized', () => {
+      render(<ProfileContent user={mockUser} />)
+      
+      const penNameInput = screen.getByDisplayValue('John Doe')
+      expect(penNameInput).toHaveClass('bg-muted/50')
+      expect(penNameInput).toHaveClass('text-muted-foreground')
+    })
+
+    it('removes muted styling when pen name is customized', async () => {
+      render(<ProfileContent user={mockUser} />)
+      
+      const editButton = screen.getByText('Edit Profile')
+      await user.click(editButton)
+      
+      // Enable customization
+      const checkbox = screen.getByRole('checkbox', { name: /customize pen name/i })
+      await user.click(checkbox)
+      
+      const penNameInput = screen.getByDisplayValue('John Doe')
+      // Muted classes should not be applied when customizing
+      // The input is now editable
+      expect(penNameInput).not.toBeDisabled()
     })
   })
 })

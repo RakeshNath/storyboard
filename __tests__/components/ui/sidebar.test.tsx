@@ -1,5 +1,6 @@
 import React from 'react'
 import { render, screen, fireEvent } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { 
   SidebarProvider,
   Sidebar,
@@ -176,6 +177,46 @@ describe('Sidebar Components', () => {
     it('passes through additional props', () => {
       render(
         <SidebarProvider data-testid="custom-provider">
+          <div>Provider Content</div>
+        </SidebarProvider>
+      )
+      
+      expect(screen.getByText('Provider Content')).toBeInTheDocument()
+    })
+
+    it('calls onOpenChange callback when provided and trigger is clicked', async () => {
+      const onOpenChange = jest.fn()
+      const user = userEvent.setup()
+      
+      render(
+        <SidebarProvider onOpenChange={onOpenChange}>
+          <SidebarTrigger />
+        </SidebarProvider>
+      )
+      
+      // Click the trigger
+      const trigger = screen.getByRole('button')
+      await user.click(trigger)
+      
+      // onOpenChange should have been called
+      expect(onOpenChange).toHaveBeenCalled()
+    })
+
+    it('uses controlled open state when open prop is provided', () => {
+      render(
+        <SidebarProvider open={true}>
+          <div>Provider Content</div>
+        </SidebarProvider>
+      )
+      
+      expect(screen.getByText('Provider Content')).toBeInTheDocument()
+    })
+
+    it('handles both open and onOpenChange for controlled component', () => {
+      const onOpenChange = jest.fn()
+      
+      render(
+        <SidebarProvider open={false} onOpenChange={onOpenChange}>
           <div>Provider Content</div>
         </SidebarProvider>
       )

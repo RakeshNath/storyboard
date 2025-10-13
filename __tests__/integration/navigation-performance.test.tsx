@@ -11,20 +11,11 @@ jest.mock('next/image', () => {
   }
 })
 
-// Mock window.alert and window.location.reload
+// Mock window.alert
 Object.defineProperty(window, 'alert', {
   value: jest.fn(),
   writable: true
 })
-
-// Mock window.location.reload
-const mockReload = jest.fn()
-// Delete the existing location property first
-delete (window as any).location
-window.location = {
-  href: 'http://localhost:3000',
-  reload: mockReload
-} as any
 
 // Mock auth functions
 jest.mock('@/lib/auth', () => ({

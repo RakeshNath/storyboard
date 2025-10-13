@@ -267,6 +267,53 @@ describe('Auth Utilities', () => {
       global.window = originalWindow
     })
 
+    it('logout returns early when window is undefined (SSR)', () => {
+      // Mock window as undefined (server-side)
+      const originalWindow = global.window
+      // @ts-ignore
+      delete global.window
+      
+      // Should not throw and should return without calling localStorage
+      expect(() => logout()).not.toThrow()
+      
+      // Restore window
+      global.window = originalWindow
+    })
+  })
 
+  describe('Logout Edge Cases', () => {
+    it('logout removes user from localStorage', () => {
+      logout()
+      
+      expect(localStorageMock.removeItem).toHaveBeenCalledWith('user')
+    })
+
+    it('logout handles localStorage errors gracefully', () => {
+      const tempRemove = localStorageMock.removeItem
+      localStorageMock.removeItem = jest.fn(() => {
+        throw new Error('localStorage error')
+      })
+      
+      // Suppress console.error
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {})
+      
+      expect(() => logout()).not.toThrow()
+      
+      expect(consoleSpy).toHaveBeenCalled()
+      
+      consoleSpy.mockRestore()
+      localStorageMock.removeItem = tempRemove
+    })
+  })
+
+  describe('updateUserTheme when no user exists', () => {
+    it('does nothing when no user exists in localStorage', () => {
+      localStorageMock.getItem.mockReturnValue(null)
+      
+      updateUserTheme('dark')
+      
+      // Should not call setItem because no user exists
+      expect(localStorageMock.setItem).not.toHaveBeenCalled()
+    })
   })
 })

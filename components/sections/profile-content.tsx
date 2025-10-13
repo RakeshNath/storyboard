@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
+import { Checkbox } from "@/components/ui/checkbox"
 import type { User } from "@/lib/auth"
 import { getUserTheme } from "@/lib/auth"
 import { useState, useEffect } from "react"
@@ -20,9 +21,10 @@ interface ProfileContentProps {
 export function ProfileContent({ user }: ProfileContentProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [currentTheme, setCurrentTheme] = useState("minimalist")
+  const [isPenNameCustom, setIsPenNameCustom] = useState(false)
   const [profile, setProfile] = useState({
-    firstName: user?.firstName || "",
-    lastName: user?.lastName || "",
+    firstName: user?.firstName || "Rakesh",
+    lastName: user?.lastName || "Raveendranath",
     email: user?.email || "",
     dateOfBirth: user?.dateOfBirth || "",
     location: user?.location || "",
@@ -30,7 +32,16 @@ export function ProfileContent({ user }: ProfileContentProps) {
     subscription: user?.subscription || "free",
     bio: "Passionate screenwriter with a love for compelling narratives and character development.",
     website: "https://example.com",
+    penName: user?.penName || "Rakesh Raveendranath",
   })
+  
+  // Update pen name when first/last name changes (if not custom)
+  useEffect(() => {
+    if (!isPenNameCustom) {
+      const defaultPenName = `${profile.firstName} ${profile.lastName}`.trim()
+      setProfile(prev => ({ ...prev, penName: defaultPenName }))
+    }
+  }, [profile.firstName, profile.lastName, isPenNameCustom])
 
   // Generate a system-generated 10-digit alphanumeric ID in format XXX-XXX-XXXX
   const generateUserId = (email: string) => {
@@ -91,9 +102,42 @@ export function ProfileContent({ user }: ProfileContentProps) {
 
 
   const handleSave = () => {
-    // Save profile logic would go here
+    // Save profile to localStorage
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('userProfile', JSON.stringify({
+        ...profile,
+        isPenNameCustom
+      }))
+    }
     setIsEditing(false)
   }
+
+  // Load profile from localStorage on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedProfile = localStorage.getItem('userProfile')
+      if (savedProfile) {
+        try {
+          const parsed = JSON.parse(savedProfile)
+          setProfile({
+            firstName: parsed.firstName || "Rakesh",
+            lastName: parsed.lastName || "Raveendranath",
+            email: parsed.email || "",
+            dateOfBirth: parsed.dateOfBirth || "",
+            location: parsed.location || "",
+            phoneNumber: parsed.phoneNumber || "",
+            subscription: parsed.subscription || "free",
+            bio: parsed.bio || "Passionate screenwriter with a love for compelling narratives and character development.",
+            website: parsed.website || "https://example.com",
+            penName: parsed.penName || "Rakesh Raveendranath",
+          })
+          setIsPenNameCustom(parsed.isPenNameCustom || false)
+        } catch (error) {
+          console.error('Error loading profile:', error)
+        }
+      }
+    }
+  }, [])
 
   return (
     <div className="space-y-8">
@@ -142,6 +186,42 @@ export function ProfileContent({ user }: ProfileContentProps) {
                   placeholder="Enter your last name"
                 />
               </div>
+            </div>
+            
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="penName">Pen Name (for story credits)</Label>
+                {isEditing && (
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id="customizePenName"
+                      checked={isPenNameCustom}
+                      onCheckedChange={(checked) => setIsPenNameCustom(checked as boolean)}
+                    />
+                    <label
+                      htmlFor="customizePenName"
+                      className="text-sm text-muted-foreground cursor-pointer"
+                    >
+                      Customize pen name
+                    </label>
+                  </div>
+                )}
+              </div>
+              <Input
+                id="penName"
+                value={profile.penName}
+                onChange={(e) => setProfile((prev) => ({ ...prev, penName: e.target.value }))}
+                disabled={!isEditing || !isPenNameCustom}
+                placeholder="Your pen name"
+                className={cn(
+                  !isPenNameCustom && "bg-muted/50 text-muted-foreground"
+                )}
+              />
+              {!isPenNameCustom && (
+                <p className="text-xs text-muted-foreground">
+                  Automatically generated from your first and last name. Check the box above to customize.
+                </p>
+              )}
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

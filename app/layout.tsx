@@ -4,6 +4,7 @@ import { GeistSans } from "geist/font/sans"
 import { GeistMono } from "geist/font/mono"
 import { Analytics } from "@vercel/analytics/next"
 import { Suspense } from "react"
+import { StorageVersionChecker } from "@/components/storage-version-checker"
 import "./globals.css"
 
 export const metadata: Metadata = {
@@ -27,6 +28,7 @@ export default function RootLayout({
       <head>
       </head>
       <body className={`font-sans ${typeof GeistSans === 'string' ? GeistSans : GeistSans.variable} ${typeof GeistMono === 'string' ? GeistMono : GeistMono.variable} antialiased`}>
+        <StorageVersionChecker />
         <Suspense fallback={null}>{children}</Suspense>
         <Analytics data-testid="analytics" />
       </body>

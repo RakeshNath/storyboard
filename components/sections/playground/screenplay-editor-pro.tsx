@@ -17,22 +17,32 @@ import {
   FileDown, 
   List, 
   Keyboard,
-  ChevronRight,
   ChevronDown,
   Users,
   MapPin,
   Edit3,
-  Download
+  Download,
+  X
 } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { cn } from '@/lib/utils'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 
 // Get next element type based on current type and key press
 const getNextElementType = (
@@ -69,6 +79,8 @@ const getNextElementType = (
           return 'action'
         case 'parenthetical':
           return 'dialogue'
+        case 'transition':
+          return 'action'
         default:
           return null
       }
@@ -81,6 +93,8 @@ const getNextElementType = (
           return 'dialogue'
         case 'dialogue':
           return 'parenthetical'
+        case 'parenthetical':
+          return 'transition'
         default:
           return null
       }
@@ -258,15 +272,36 @@ export function ScreenplayEditorPro({ title = 'Untitled Screenplay' }: Screenpla
   const [characterProfiles, setCharacterProfiles] = useState<Record<string, string>>({})
   const [characterTypes, setCharacterTypes] = useState<Record<string, string>>({})
   const [locationProfiles, setLocationProfiles] = useState<Record<string, string>>({})
+  const [draggedSceneIndex, setDraggedSceneIndex] = useState<number | null>(null)
+  const [dragOverSceneIndex, setDragOverSceneIndex] = useState<number | null>(null)
+  const [isReordering, setIsReordering] = useState(false)
   const [currentElementType, setCurrentElementType] = useState<ScreenplayElementType>('action')
   const [autocompleteOptions, setAutocompleteOptions] = useState<string[]>([])
   const [showAutocomplete, setShowAutocomplete] = useState(false)
   const [autocompleteIndex, setAutocompleteIndex] = useState(0)
   const [autocompletePosition, setAutocompletePosition] = useState<{ top: number; left: number } | null>(null)
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [sceneToDelete, setSceneToDelete] = useState<CustomElement | null>(null)
   const screenplayTitle = title
-  const [authorName, setAuthorName] = useState('Your Name')
+  const [authorName, setAuthorName] = useState('Rakesh Raveendranath')
   
   const editor = useMemo(() => withScreenplay(withHistory(withReact(createEditor()))), [])
+
+  // Load pen name from profile
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedProfile = localStorage.getItem('userProfile')
+      if (savedProfile) {
+        try {
+          const parsed = JSON.parse(savedProfile)
+          const penName = parsed.penName || `${parsed.firstName || 'Rakesh'} ${parsed.lastName || 'Raveendranath'}`.trim()
+          setAuthorName(penName)
+        } catch (error) {
+          console.error('Error loading author name:', error)
+        }
+      }
+    }
+  }, [])
 
   // Extract scenes from document for outliner
   useEffect(() => {
@@ -439,23 +474,37 @@ export function ScreenplayEditorPro({ title = 'Untitled Screenplay' }: Screenpla
           let field = ''
           
           // Determine which field we're in and show relevant options
+          // New format is: INT. LOCATION - TIME (no hyphen between format and location)
           if (parts.length === 1) {
-            // Editing format (INT/EXT)
-            field = 'format'
-            options = FORMAT_OPTIONS.filter(opt => 
-              opt.toLowerCase().includes(parts[0]?.toLowerCase() || '')
-            )
+            // Could be editing format or location
+            const formatMatch = parts[0].match(/^(INT\.?|EXT\.?|INT\.?\/EXT\.?|EXT\.?\/INT\.?)$/i)
+            const hasFormatWithLocation = parts[0].match(/^(INT\.?|EXT\.?|INT\.?\/EXT\.?|EXT\.?\/INT\.?)\s+(.+)$/i)
+            
+            if (formatMatch) {
+              // Just format, no location yet - show format options
+              field = 'format'
+              options = FORMAT_OPTIONS.filter(opt => 
+                opt.toLowerCase().includes(parts[0]?.toLowerCase() || '')
+              )
+            } else if (hasFormatWithLocation) {
+              // Has format and partial location - show location options
+              field = 'location'
+              const locationPart = hasFormatWithLocation[2] || ''
+              options = COMMON_LOCATIONS.filter(opt =>
+                opt.toLowerCase().includes(locationPart.toLowerCase())
+              )
+            } else {
+              // Editing format
+              field = 'format'
+              options = FORMAT_OPTIONS.filter(opt => 
+                opt.toLowerCase().includes(parts[0]?.toLowerCase() || '')
+              )
+            }
           } else if (parts.length === 2) {
-            // Editing location
-            field = 'location'
-            options = COMMON_LOCATIONS.filter(opt =>
-              opt.toLowerCase().includes(parts[1]?.toLowerCase() || '')
-            )
-          } else if (parts.length === 3) {
-            // Editing time of day
+            // Editing time of day (parts[1] is time)
             field = 'time'
             options = TIME_OPTIONS.filter(opt =>
-              opt.toLowerCase().includes(parts[2]?.toLowerCase() || '')
+              opt.toLowerCase().includes(parts[1]?.toLowerCase() || '')
             )
           }
           
@@ -562,7 +611,8 @@ export function ScreenplayEditorPro({ title = 'Untitled Screenplay' }: Screenpla
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = 'screenplay.txt'
+      const fileName = `${screenplayTitle.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_draft.txt`
+      a.download = fileName
       a.click()
       URL.revokeObjectURL(url)
       
@@ -635,7 +685,8 @@ ${''.padStart(40)}${authorName}
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = 'screenplay-formatted.txt'
+      const fileName = `${screenplayTitle.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_draft_formatted.txt`
+      a.download = fileName
       a.click()
       URL.revokeObjectURL(url)
       
@@ -803,13 +854,113 @@ ${''.padStart(40)}${authorName}
       })
 
       // Save the PDF
-      doc.save('screenplay.pdf')
+      const fileName = `${screenplayTitle.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_draft.pdf`
+      doc.save(fileName)
       console.log('PDF export completed successfully')
     } catch (error) {
       console.error('Error exporting PDF:', error)
       alert('Error exporting PDF. Please try again.')
     }
   }, [value, screenplayTitle, authorName])
+
+  // Check if scene has content
+  const checkSceneHasContent = useCallback((element: CustomElement): boolean => {
+    try {
+      const path = ReactEditor.findPath(editor, element)
+      const nodeIndex = path[0]
+      
+      // Check if scene heading has content
+      const sceneHeadingText = Node.string(element).trim()
+      
+      // Find all nodes until the next scene heading or end
+      let hasContent = sceneHeadingText.length > 0
+      
+      for (let i = nodeIndex + 1; i < value.length; i++) {
+        const node = value[i]
+        if (SlateElement.isElement(node) && node.type === 'scene-heading') {
+          // Hit next scene heading, stop here
+          break
+        }
+        // Check if this node has content
+        if (Node.string(node).trim().length > 0) {
+          hasContent = true
+          break
+        }
+      }
+      
+      return hasContent
+    } catch (error) {
+      console.error('Error checking scene content:', error)
+      return false
+    }
+  }, [editor, value])
+
+  // Delete scene heading and its content
+  const deleteSceneHeading = useCallback((element: CustomElement) => {
+    // Check if scene has content
+    const hasContent = checkSceneHasContent(element)
+    
+    if (hasContent) {
+      // Show confirmation dialog
+      setSceneToDelete(element)
+      setShowDeleteDialog(true)
+    } else {
+      // Delete immediately if empty
+      performSceneDeletion(element)
+    }
+  }, [checkSceneHasContent])
+
+  // Actually perform the deletion
+  const performSceneDeletion = useCallback((element: CustomElement) => {
+    try {
+      const path = ReactEditor.findPath(editor, element)
+      const nodeIndex = path[0]
+      
+      // Find all nodes until the next scene heading or end
+      let nodesToDelete = 1 // Start with the scene heading itself
+      
+      for (let i = nodeIndex + 1; i < value.length; i++) {
+        const node = value[i]
+        if (SlateElement.isElement(node) && node.type === 'scene-heading') {
+          // Hit next scene heading, stop here
+          break
+        }
+        nodesToDelete++
+      }
+      
+      // Delete the scene heading and all its content
+      for (let i = 0; i < nodesToDelete; i++) {
+        Transforms.removeNodes(editor, { at: [nodeIndex] })
+      }
+      
+      // If we deleted everything, add a default action node
+      if (value.length === nodesToDelete) {
+        Transforms.insertNodes(editor, {
+          type: 'action',
+          children: [{ text: '' }],
+        }, { at: [0] })
+      }
+      
+      console.log(`Deleted scene with ${nodesToDelete} nodes`)
+    } catch (error) {
+      console.error('Error deleting scene:', error)
+    }
+  }, [editor, value])
+
+  // Handle delete confirmation
+  const handleDeleteConfirm = useCallback(() => {
+    if (sceneToDelete) {
+      performSceneDeletion(sceneToDelete)
+    }
+    setShowDeleteDialog(false)
+    setSceneToDelete(null)
+  }, [sceneToDelete, performSceneDeletion])
+
+  // Handle delete cancel
+  const handleDeleteCancel = useCallback(() => {
+    setShowDeleteDialog(false)
+    setSceneToDelete(null)
+  }, [])
 
   // Get inline placeholder text for empty elements
   const getPlaceholderForElement = useCallback((elementType: ScreenplayElementType): string => {
@@ -842,24 +993,69 @@ ${''.padStart(40)}${authorName}
 
     // Special handling for scene headings with autocomplete
     if (customElement.type === 'scene-heading') {
+      // Calculate scene number
+      let sceneNumber = 1
+      const path = ReactEditor.findPath(editor, element)
+      const nodeIndex = path[0]
+      
+      // Count how many scene headings come before this one
+      for (let i = 0; i < nodeIndex; i++) {
+        const node = value[i]
+        if (SlateElement.isElement(node) && node.type === 'scene-heading') {
+          sceneNumber++
+        }
+      }
+      
       return (
-        <div 
-          {...attributes} 
-          style={{
-            ...style,
-            borderBottom: undefined, // Remove from inline style
-          }} 
-          className="outline-none relative group border-b-2 border-primary/20 bg-primary/5 px-2 py-1 rounded-sm"
-        >
-          {isEmpty && (
-            <span
+        <div className="relative">
+          {/* Scene separator - horizontal rule before scene heading (skip for first scene) */}
+          {sceneNumber > 1 && (
+            <div 
               contentEditable={false}
-              className="absolute left-2 top-1 pointer-events-none text-muted-foreground/50 select-none"
+              className="mb-8 mt-12 flex items-center gap-4 select-none pointer-events-none"
             >
-              INT. LOCATION - DAY (use Tab to navigate)
-            </span>
+              <div className="flex-1 h-px bg-gradient-to-r from-transparent via-border to-transparent"></div>
+              <div className="flex items-center gap-2 text-xs text-muted-foreground font-medium">
+                <div className="w-1.5 h-1.5 rounded-full bg-primary/40"></div>
+                <span>SCENE {sceneNumber}</span>
+                <div className="w-1.5 h-1.5 rounded-full bg-primary/40"></div>
+              </div>
+              <div className="flex-1 h-px bg-gradient-to-r from-transparent via-border to-transparent"></div>
+            </div>
           )}
-          {children}
+          
+          <div 
+            {...attributes} 
+            style={{
+              ...style,
+              borderBottom: undefined, // Remove from inline style
+            }} 
+            className="outline-none relative group border-b-2 border-primary/20 bg-primary/5 pl-8 pr-2 py-1 rounded-sm"
+          >
+            {/* Delete button */}
+            <button
+              contentEditable={false}
+              onClick={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                deleteSceneHeading(customElement)
+              }}
+              className="absolute left-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity p-0.5 hover:bg-destructive/10 rounded text-muted-foreground hover:text-destructive"
+              title="Delete scene"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+            
+            {isEmpty && (
+              <span
+                contentEditable={false}
+                className="absolute left-8 top-1 pointer-events-none text-muted-foreground/50 select-none"
+              >
+                INT. LOCATION - DAY (use Tab to navigate)
+              </span>
+            )}
+            {children}
+          </div>
         </div>
       )
     }
@@ -877,7 +1073,7 @@ ${''.padStart(40)}${authorName}
         {children}
       </div>
     )
-  }, [getPlaceholderForElement])
+  }, [getPlaceholderForElement, editor, value, deleteSceneHeading])
 
   // Render leaf (text formatting)
   const renderLeaf = useCallback((props: RenderLeafProps) => {
@@ -914,19 +1110,29 @@ ${''.padStart(40)}${authorName}
         const parts = text.split(' - ')
 
         let newText = ''
-        if (parts.length === 1 && !parts[0].includes('.')) {
-          // Selected format - add the format with period and space
-          const format = option.endsWith('.') ? option + ' ' : option + '. '
-          newText = format
-        } else if (parts.length === 1 && parts[0].includes('.')) {
-          // Already have format with period, adding location with separator
-          newText = `${parts[0]} - ${option} - `
+        
+        // New format: INT. LOCATION - TIME (no hyphen between format and location)
+        if (parts.length === 1) {
+          // Either selecting format or location
+          const formatMatch = parts[0].match(/^(INT\.?|EXT\.?|INT\.?\/EXT\.?|EXT\.?\/INT\.?)$/i)
+          const hasFormatWithLocation = parts[0].match(/^(INT\.?|EXT\.?|INT\.?\/EXT\.?|EXT\.?\/INT\.?)\s+(.+)$/i)
+          
+          if (formatMatch) {
+            // Selected format - add the format with period and space
+            const format = option.endsWith('.') ? option + ' ' : option + '. '
+            newText = format
+          } else if (hasFormatWithLocation) {
+            // Has format and partial location - replace with selected location and add separator
+            const format = hasFormatWithLocation[1].trim()
+            newText = `${format} ${option} - `
+          } else {
+            // Just typing format - add period and space
+            const format = option.endsWith('.') ? option + ' ' : option + '. '
+            newText = format
+          }
         } else if (parts.length === 2) {
-          // Selected location, adding separator for time
-          newText = `${parts[0]} - ${option} - `
-        } else if (parts.length === 3) {
-          // Selected time
-          newText = `${parts[0]} - ${parts[1]} - ${option}`
+          // Selecting time of day - complete the scene heading
+          newText = `${parts[0]} - ${option}`
         }
 
         // Replace text
@@ -1082,30 +1288,31 @@ ${''.padStart(40)}${authorName}
                   return
                 }
                 
-                // Have location after the period, uppercase it and add separator for time
-                const newText = `${parts[0].toUpperCase()} - `
-                Transforms.delete(editor, { at: path })
-                Transforms.insertNodes(editor, {
-                  type: 'scene-heading',
-                  children: [{ text: newText }],
-                }, { at: path })
-                // Move cursor to end
-                setTimeout(() => {
-                  Transforms.select(editor, Editor.end(editor, path))
-                }, 0)
-              } else if (parts.length === 2 && parts[1]) {
-                // Have format and location, uppercase time and add separator
-                const newText = `${parts[0]} - ${parts[1].toUpperCase()} - `
-                Transforms.delete(editor, { at: path })
-                Transforms.insertNodes(editor, {
-                  type: 'scene-heading',
-                  children: [{ text: newText }],
-                }, { at: path })
-                // Move cursor to end
-                setTimeout(() => {
-                  Transforms.select(editor, Editor.end(editor, path))
-                }, 0)
+                // Extract format (INT./EXT.) and location
+                const match = trimmed.match(/^((?:INT|EXT|INT\.?\/EXT|EXT\.?\/INT)\.?\s*)(.*)$/i)
+                if (match && match[2]) {
+                  // Have both format and location
+                  const format = match[1].trim().toUpperCase()
+                  const location = match[2].trim().toUpperCase()
+                  
+                  // Format: INT. LOCATION - (ready for time of day)
+                  const newText = `${format} ${location} - `
+                  Transforms.delete(editor, { at: path })
+                  Transforms.insertNodes(editor, {
+                    type: 'scene-heading',
+                    children: [{ text: newText }],
+                  }, { at: path })
+                  // Move cursor to end
+                  setTimeout(() => {
+                    Transforms.select(editor, Editor.end(editor, path))
+                  }, 0)
+                } else {
+                  // Just format, no location yet
+                  return
+                }
               }
+              // Note: With new format (INT. LOCATION - TIME), if parts.length === 2,
+              // we already have the full structure, so Tab does nothing special here
               
               console.log('Scene heading Tab navigation:', { parts, currentText })
               return
@@ -1172,6 +1379,92 @@ ${''.padStart(40)}${authorName}
     // Focus editor
     ReactEditor.focus(editor)
   }, [editor])
+
+  // Reorder scenes via drag and drop
+  const reorderScenes = useCallback((fromIndex: number, toIndex: number) => {
+    if (fromIndex === toIndex) return
+    
+    setIsReordering(true)
+    
+    // Use setTimeout to ensure UI updates
+    setTimeout(() => {
+      try {
+        console.log(`Reordering scene from index ${fromIndex} to ${toIndex}`)
+        
+        // Get the scene heading nodes and their positions
+        const sceneNodes: Array<{ node: CustomElement; position: number }> = []
+        value.forEach((node, index) => {
+          if (SlateElement.isElement(node) && node.type === 'scene-heading') {
+            sceneNodes.push({ node: node as CustomElement, position: index })
+          }
+        })
+        
+        console.log(`Found ${sceneNodes.length} scenes`)
+        
+        if (fromIndex < 0 || fromIndex >= sceneNodes.length || toIndex < 0 || toIndex >= sceneNodes.length) {
+          console.log('Invalid indices')
+          setIsReordering(false)
+          return
+        }
+        
+        // Find the start and end of each scene
+        const getSceneContent = (sceneIndex: number) => {
+          const startPos = sceneNodes[sceneIndex].position
+          const endPos = sceneIndex + 1 < sceneNodes.length 
+            ? sceneNodes[sceneIndex + 1].position 
+            : value.length
+          return { start: startPos, end: endPos, nodes: value.slice(startPos, endPos) }
+        }
+        
+        const fromSceneContent = getSceneContent(fromIndex)
+        console.log(`From scene: lines ${fromSceneContent.start} to ${fromSceneContent.end}, nodes: ${fromSceneContent.nodes.length}`)
+        
+        // Collect all scenes
+        const allScenes = sceneNodes.map((_, idx) => getSceneContent(idx))
+        
+        // Create new order
+        const newOrder = [...allScenes]
+        const [movedScene] = newOrder.splice(fromIndex, 1)
+        newOrder.splice(toIndex, 0, movedScene)
+        
+        // Build the new value from reordered scenes
+        const newValue: Descendant[] = []
+        newOrder.forEach(scene => {
+          // Simply copy all nodes from each scene - they already have correct structure
+          newValue.push(...scene.nodes)
+        })
+        
+        console.log(`Old length: ${value.length}, New length: ${newValue.length}`)
+        
+        // Validate the new value has at least some content
+        if (newValue.length === 0) {
+          console.error('New value is empty, aborting reorder')
+          setIsReordering(false)
+          return
+        }
+        
+        // Replace all children in the Slate editor by directly setting children
+        // This avoids path errors when deleting/inserting nodes
+        editor.children = newValue as any[]
+        
+        // Normalize the editor to ensure it's in a valid state
+        Editor.normalize(editor, { force: true })
+        
+        // Trigger a re-render
+        editor.onChange()
+        
+        console.log('Scene reordering complete')
+        
+        // Update state to keep in sync
+        setValue(newValue)
+        
+        setIsReordering(false)
+      } catch (error) {
+        console.error('Error reordering scenes:', error)
+        setIsReordering(false)
+      }
+    }, 100)
+  }, [value, editor])
 
   // Rename character throughout screenplay
   const renameCharacter = useCallback((oldName: string, newName: string) => {
@@ -1366,15 +1659,20 @@ ${''.padStart(40)}${authorName}
 
       {/* Main Content Area */}
       <div className="flex-1 flex overflow-hidden">
-        {/* Scene Outliner - Hide when viewing Characters/Locations/Help */}
-        {showOutliner && !showCharacters && !showLocations && !showHelp && (
-          <Card className="w-64 m-2 p-0 overflow-hidden flex flex-col border">
-            <div className="p-3 border-b bg-muted/30 flex items-center justify-between">
-              <h3 className="font-semibold text-sm">Scene Outliner</h3>
-              <p className="text-xs text-muted-foreground">{scenes.length} scene{scenes.length !== 1 ? 's' : ''}</p>
-            </div>
-            <ScrollArea className="flex-1">
-              <div className="p-2">
+        {/* Scene Outliner with Resizable Panel */}
+        <ResizablePanelGroup direction="horizontal" className="flex-1">
+          {/* Show outliner only in editor mode (not Characters/Locations/Help) and when showOutliner is true */}
+          {showOutliner && !showCharacters && !showLocations && !showHelp && (
+            <>
+              <ResizablePanel defaultSize={20} minSize={15} maxSize={40} className="m-2">
+                <Card className="h-full p-0 overflow-hidden flex flex-col border">
+                <div className="p-3 border-b bg-muted/30 flex items-center justify-between flex-shrink-0">
+                  <h3 className="font-semibold text-sm">Scene Outliner</h3>
+                  <p className="text-xs text-muted-foreground">{scenes.length} scene{scenes.length !== 1 ? 's' : ''}</p>
+                </div>
+                <div className="flex-1 overflow-hidden">
+                  <ScrollArea className="h-full">
+                    <div className="p-1.5 space-y-0.5">
                 {scenes.length === 0 ? (
                   <p className="text-sm text-muted-foreground p-2">
                     No scenes yet. Type a scene heading to get started.
@@ -1383,16 +1681,44 @@ ${''.padStart(40)}${authorName}
                   scenes.map((scene, index) => (
                     <button
                       key={scene.id}
+                      draggable
+                      onDragStart={() => {
+                        setDraggedSceneIndex(index)
+                      }}
+                      onDragOver={(e) => {
+                        e.preventDefault()
+                        setDragOverSceneIndex(index)
+                      }}
+                      onDragLeave={() => {
+                        setDragOverSceneIndex(null)
+                      }}
+                      onDrop={(e) => {
+                        e.preventDefault()
+                        if (draggedSceneIndex !== null && draggedSceneIndex !== index) {
+                          reorderScenes(draggedSceneIndex, index)
+                        }
+                        setDraggedSceneIndex(null)
+                        setDragOverSceneIndex(null)
+                      }}
+                      onDragEnd={() => {
+                        setDraggedSceneIndex(null)
+                        setDragOverSceneIndex(null)
+                      }}
                       onClick={() => navigateToScene(scene.lineNumber)}
-                      className="w-full text-left p-2 rounded hover:bg-accent text-sm transition-colors"
+                      className={cn(
+                        "w-full text-left px-2 py-1.5 rounded hover:bg-accent text-sm transition-all duration-200 cursor-move",
+                        draggedSceneIndex === index && "opacity-50 scale-95",
+                        dragOverSceneIndex === index && draggedSceneIndex !== index && "border-2 border-primary bg-primary/10"
+                      )}
                     >
                       <div className="flex items-start gap-2">
-                        <ChevronRight className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                        <div className="flex-1 min-w-0">
-                          <div className="font-medium truncate">
-                            Scene {index + 1}
-                          </div>
-                          <div className="text-xs text-muted-foreground truncate uppercase font-semibold">
+                        <div className="flex-shrink-0 w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center">
+                          <span className="text-xs font-bold text-primary">
+                            {index + 1}
+                          </span>
+                        </div>
+                        <div className="flex-1 min-w-0 pt-0.5">
+                          <div className="text-xs text-foreground truncate uppercase font-semibold leading-tight">
                             {scene.text.toUpperCase()}
                           </div>
                         </div>
@@ -1402,11 +1728,19 @@ ${''.padStart(40)}${authorName}
                 )}
               </div>
             </ScrollArea>
+          </div>
           </Card>
-        )}
-
-        {/* Editor */}
-        <div className={`flex-1 flex flex-col overflow-hidden ${(showCharacters || showLocations || showHelp) ? '' : 'm-2 gap-2'}`}>
+              </ResizablePanel>
+        
+              <ResizableHandle withHandle />
+            </>
+          )}
+        
+          <ResizablePanel 
+            defaultSize={showOutliner && !showCharacters && !showLocations && !showHelp ? 80 : 100} 
+            minSize={60}
+          >
+          <div className={`h-full flex flex-col overflow-hidden ${(showCharacters || showLocations || showHelp) ? '' : 'm-2 gap-2'}`}>
           {/* Quick Help Bar and Export Panel - Only show when in editor mode */}
           {!showCharacters && !showLocations && !showHelp && (
             <div className="flex flex-wrap gap-2">
@@ -1431,7 +1765,7 @@ ${''.padStart(40)}${authorName}
                     <span>Press <kbd className="px-1.5 py-0.5 bg-background rounded border">Tab</kbd> for Parenthetical or <kbd className="px-1.5 py-0.5 bg-background rounded border">Enter</kbd> for Action</span>
                   )}
                   {currentElementType === 'parenthetical' && (
-                    <span>Press <kbd className="px-1.5 py-0.5 bg-background rounded border">Enter</kbd> to return to Dialogue</span>
+                    <span>Press <kbd className="px-1.5 py-0.5 bg-background rounded border">Tab</kbd> for Transition or <kbd className="px-1.5 py-0.5 bg-background rounded border">Enter</kbd> to return to Dialogue</span>
                   )}
                   {currentElementType === 'transition' && (
                     <span>Press <kbd className="px-1.5 py-0.5 bg-background rounded border">Enter</kbd> to add Action</span>
@@ -1563,7 +1897,7 @@ ${''.padStart(40)}${authorName}
                                           const url = URL.createObjectURL(blob)
                                           const a = document.createElement('a')
                                           a.href = url
-                                          a.download = `${screenplayTitle.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_characters.json`
+                                          a.download = `${screenplayTitle.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_draft_characters.json`
                                           document.body.appendChild(a)
                                           a.click()
                                           document.body.removeChild(a)
@@ -1574,6 +1908,113 @@ ${''.padStart(40)}${authorName}
                                       >
                                         <FileDown className="h-3.5 w-3.5" />
                                         JSON File (.json)
+                                      </button>
+                                      
+                                      <button
+                                        onClick={() => {
+                                          const text = characterDetails.map((character) => {
+                                            const profile = characterProfiles[character.name] || 'No profile'
+                                            const type = characterTypes[character.name] || 'Not Mentioned'
+                                            return `CHARACTER: ${character.name}\nType: ${type}\nAppearances: ${character.appearances}\nScenes: ${character.scenes.join(', ')}\nProfile: ${profile}\n\nDialogue Lines:\n${character.dialogues.map((d, i) => `  ${i + 1}. (Line ${d.lineNumber}) ${d.text}`).join('\n')}\n\n${'='.repeat(80)}\n`
+                                          }).join('\n')
+                                          
+                                          const blob = new Blob([text], { type: 'text/plain' })
+                                          const url = URL.createObjectURL(blob)
+                                          const a = document.createElement('a')
+                                          a.href = url
+                                          a.download = `${screenplayTitle.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_draft_characters.txt`
+                                          document.body.appendChild(a)
+                                          a.click()
+                                          document.body.removeChild(a)
+                                          URL.revokeObjectURL(url)
+                                          setShowCharacterExportMenu(false)
+                                        }}
+                                        className="w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded-sm hover:bg-accent hover:text-accent-foreground cursor-pointer"
+                                      >
+                                        <FileDown className="h-3.5 w-3.5" />
+                                        Text File (.txt)
+                                      </button>
+                                      
+                                      <button
+                                        onClick={() => {
+                                          const csv = [
+                                            ['Name', 'Type', 'Appearances', 'Scenes', 'Profile'],
+                                            ...characterDetails.map((character) => [
+                                              character.name,
+                                              characterTypes[character.name] || 'Not Mentioned',
+                                              character.appearances.toString(),
+                                              character.scenes.join('; '),
+                                              (characterProfiles[character.name] || 'No profile').replace(/,/g, ';')
+                                            ])
+                                          ].map(row => row.join(',')).join('\n')
+                                          
+                                          const blob = new Blob([csv], { type: 'text/csv' })
+                                          const url = URL.createObjectURL(blob)
+                                          const a = document.createElement('a')
+                                          a.href = url
+                                          a.download = `${screenplayTitle.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_draft_characters.csv`
+                                          document.body.appendChild(a)
+                                          a.click()
+                                          document.body.removeChild(a)
+                                          URL.revokeObjectURL(url)
+                                          setShowCharacterExportMenu(false)
+                                        }}
+                                        className="w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded-sm hover:bg-accent hover:text-accent-foreground cursor-pointer"
+                                      >
+                                        <FileDown className="h-3.5 w-3.5" />
+                                        CSV File (.csv)
+                                      </button>
+                                      
+                                      <button
+                                        onClick={() => {
+                                          import('jspdf').then(({ jsPDF }) => {
+                                            const doc = new jsPDF()
+                                            const margin = 20
+                                            let yPosition = margin
+                                            
+                                            // Title
+                                            doc.setFontSize(18)
+                                            doc.setFont('helvetica', 'bold')
+                                            doc.text(`${screenplayTitle} - Characters`, margin, yPosition)
+                                            yPosition += 15
+                                            
+                                            doc.setFontSize(10)
+                                            doc.setFont('helvetica', 'normal')
+                                            
+                                            characterDetails.forEach((character) => {
+                                              // Check if we need a new page
+                                              if (yPosition > 270) {
+                                                doc.addPage()
+                                                yPosition = margin
+                                              }
+                                              
+                                              doc.setFont('helvetica', 'bold')
+                                              doc.text(`${character.name}`, margin, yPosition)
+                                              yPosition += 6
+                                              
+                                              doc.setFont('helvetica', 'normal')
+                                              const type = characterTypes[character.name] || 'Not Mentioned'
+                                              doc.text(`Type: ${type}`, margin + 5, yPosition)
+                                              yPosition += 5
+                                              doc.text(`Appearances: ${character.appearances}`, margin + 5, yPosition)
+                                              yPosition += 5
+                                              doc.text(`Scenes: ${character.scenes.join(', ')}`, margin + 5, yPosition)
+                                              yPosition += 5
+                                              
+                                              const profile = characterProfiles[character.name] || 'No profile'
+                                              const profileLines = doc.splitTextToSize(`Profile: ${profile}`, 170)
+                                              doc.text(profileLines, margin + 5, yPosition)
+                                              yPosition += profileLines.length * 5 + 5
+                                            })
+                                            
+                                            doc.save(`${screenplayTitle.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_draft_characters.pdf`)
+                                            setShowCharacterExportMenu(false)
+                                          })
+                                        }}
+                                        className="w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded-sm hover:bg-accent hover:text-accent-foreground cursor-pointer"
+                                      >
+                                        <FileDown className="h-3.5 w-3.5" />
+                                        PDF Document (.pdf)
                                       </button>
                                     </div>
                                   </div>
@@ -1746,7 +2187,7 @@ ${''.padStart(40)}${authorName}
                                           const url = URL.createObjectURL(blob)
                                           const a = document.createElement('a')
                                           a.href = url
-                                          a.download = `${screenplayTitle.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_locations.json`
+                                          a.download = `${screenplayTitle.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_draft_locations.json`
                                           document.body.appendChild(a)
                                           a.click()
                                           document.body.removeChild(a)
@@ -1757,6 +2198,118 @@ ${''.padStart(40)}${authorName}
                                       >
                                         <FileDown className="h-3.5 w-3.5" />
                                         JSON File (.json)
+                                      </button>
+                                      
+                                      <button
+                                        onClick={() => {
+                                          const text = locations.map((location) => {
+                                            const description = locationProfiles[location.name] || 'No description'
+                                            const timeOfDayStr = Object.entries(location.timeOfDay)
+                                              .map(([time, count]) => `${time}: ${count}x`)
+                                              .join(', ')
+                                            return `LOCATION: ${location.name}\nTotal Scenes: ${location.scenes.length}\nScene Numbers: ${location.scenes.join(', ')}\nTime of Day: ${timeOfDayStr}\nDescription: ${description}\n\n${'='.repeat(80)}\n`
+                                          }).join('\n')
+                                          
+                                          const blob = new Blob([text], { type: 'text/plain' })
+                                          const url = URL.createObjectURL(blob)
+                                          const a = document.createElement('a')
+                                          a.href = url
+                                          a.download = `${screenplayTitle.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_draft_locations.txt`
+                                          document.body.appendChild(a)
+                                          a.click()
+                                          document.body.removeChild(a)
+                                          URL.revokeObjectURL(url)
+                                          setShowLocationExportMenu(false)
+                                        }}
+                                        className="w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded-sm hover:bg-accent hover:text-accent-foreground cursor-pointer"
+                                      >
+                                        <FileDown className="h-3.5 w-3.5" />
+                                        Text File (.txt)
+                                      </button>
+                                      
+                                      <button
+                                        onClick={() => {
+                                          const csv = [
+                                            ['Name', 'Total Scenes', 'Scene Numbers', 'Time of Day', 'Description'],
+                                            ...locations.map((location) => [
+                                              location.name,
+                                              location.scenes.length.toString(),
+                                              location.scenes.join('; '),
+                                              Object.entries(location.timeOfDay).map(([time, count]) => `${time}:${count}`).join('; '),
+                                              (locationProfiles[location.name] || 'No description').replace(/,/g, ';')
+                                            ])
+                                          ].map(row => row.join(',')).join('\n')
+                                          
+                                          const blob = new Blob([csv], { type: 'text/csv' })
+                                          const url = URL.createObjectURL(blob)
+                                          const a = document.createElement('a')
+                                          a.href = url
+                                          a.download = `${screenplayTitle.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_draft_locations.csv`
+                                          document.body.appendChild(a)
+                                          a.click()
+                                          document.body.removeChild(a)
+                                          URL.revokeObjectURL(url)
+                                          setShowLocationExportMenu(false)
+                                        }}
+                                        className="w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded-sm hover:bg-accent hover:text-accent-foreground cursor-pointer"
+                                      >
+                                        <FileDown className="h-3.5 w-3.5" />
+                                        CSV File (.csv)
+                                      </button>
+                                      
+                                      <button
+                                        onClick={() => {
+                                          import('jspdf').then(({ jsPDF }) => {
+                                            const doc = new jsPDF()
+                                            const margin = 20
+                                            let yPosition = margin
+                                            
+                                            // Title
+                                            doc.setFontSize(18)
+                                            doc.setFont('helvetica', 'bold')
+                                            doc.text(`${screenplayTitle} - Locations`, margin, yPosition)
+                                            yPosition += 15
+                                            
+                                            doc.setFontSize(10)
+                                            doc.setFont('helvetica', 'normal')
+                                            
+                                            locations.forEach((location) => {
+                                              // Check if we need a new page
+                                              if (yPosition > 270) {
+                                                doc.addPage()
+                                                yPosition = margin
+                                              }
+                                              
+                                              doc.setFont('helvetica', 'bold')
+                                              doc.text(`${location.name}`, margin, yPosition)
+                                              yPosition += 6
+                                              
+                                              doc.setFont('helvetica', 'normal')
+                                              doc.text(`Total Scenes: ${location.scenes.length}`, margin + 5, yPosition)
+                                              yPosition += 5
+                                              doc.text(`Scene Numbers: ${location.scenes.join(', ')}`, margin + 5, yPosition)
+                                              yPosition += 5
+                                              
+                                              const timeOfDayStr = Object.entries(location.timeOfDay)
+                                                .map(([time, count]) => `${time}: ${count}x`)
+                                                .join(', ')
+                                              doc.text(`Time of Day: ${timeOfDayStr}`, margin + 5, yPosition)
+                                              yPosition += 5
+                                              
+                                              const description = locationProfiles[location.name] || 'No description'
+                                              const descLines = doc.splitTextToSize(`Description: ${description}`, 170)
+                                              doc.text(descLines, margin + 5, yPosition)
+                                              yPosition += descLines.length * 5 + 5
+                                            })
+                                            
+                                            doc.save(`${screenplayTitle.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_draft_locations.pdf`)
+                                            setShowLocationExportMenu(false)
+                                          })
+                                        }}
+                                        className="w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded-sm hover:bg-accent hover:text-accent-foreground cursor-pointer"
+                                      >
+                                        <FileDown className="h-3.5 w-3.5" />
+                                        PDF Document (.pdf)
                                       </button>
                                     </div>
                                   </div>
@@ -1918,7 +2471,17 @@ ${''.padStart(40)}${authorName}
                 </div>
               ) : (
                 // Editor Content
-                <div className="p-8 max-w-4xl mx-auto">
+                <div className="p-8 max-w-4xl mx-auto relative">
+                  {/* Loading overlay during scene reordering */}
+                  {isReordering && (
+                    <div className="absolute inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center">
+                      <div className="bg-card border rounded-lg p-6 shadow-lg flex flex-col items-center gap-3">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                        <p className="text-sm font-medium">Reordering scenes...</p>
+                      </div>
+                    </div>
+                  )}
+                  
                   <Slate
                     editor={editor}
                     initialValue={value}
@@ -1959,6 +2522,8 @@ ${''.padStart(40)}${authorName}
             </ScrollArea>
           </Card>
         </div>
+          </ResizablePanel>
+        </ResizablePanelGroup>
       </div>
 
       {/* Autocomplete Dropdown */}
@@ -1990,6 +2555,26 @@ ${''.padStart(40)}${authorName}
           ))}
         </div>
       )}
+
+      {/* Delete Scene Confirmation Dialog */}
+      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Scene?</DialogTitle>
+            <DialogDescription>
+              This scene has content. Are you sure you want to delete it? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={handleDeleteCancel}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleDeleteConfirm}>
+              Delete Scene
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

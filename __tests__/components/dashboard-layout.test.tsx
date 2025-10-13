@@ -1,4 +1,5 @@
 import { render, screen, fireEvent } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { DashboardLayout } from '@/components/dashboard-layout'
 
 // Mock Lucide React icons
@@ -384,6 +385,42 @@ describe('DashboardLayout', () => {
       expect(screen.getByText('Test User')).toBeInTheDocument()
       
       jest.useRealTimers()
+    })
+  })
+
+  describe('Clear Cache Button in Header', () => {
+    it('renders Clear Cache button', () => {
+      render(<DashboardLayout {...defaultProps} />)
+
+      const clearCacheButton = screen.getAllByText('Clear Cache')[0]
+      expect(clearCacheButton).toBeInTheDocument()
+    })
+
+    it('clicks clear cache button triggers alert', async () => {
+      jest.useFakeTimers()
+      const user = userEvent.setup({ delay: null })
+      const alertSpy = jest.spyOn(window, 'alert').mockImplementation()
+      
+      render(<DashboardLayout {...defaultProps} />)
+
+      // Find all Clear Cache elements
+      const clearCacheElements = screen.getAllByText('Clear Cache')
+      const headerButton = clearCacheElements.find(el => el.closest('header'))
+      
+      if (headerButton) {
+        const button = headerButton.closest('button')
+        if (button) {
+          await user.click(button)
+          
+          // Should call alert
+          expect(alertSpy).toHaveBeenCalledWith(
+            expect.stringContaining('Cache cleared!')
+          )
+        }
+      }
+      
+      jest.useRealTimers()
+      alertSpy.mockRestore()
     })
   })
 })

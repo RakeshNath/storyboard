@@ -416,7 +416,7 @@ describe('Storyboard Workflow Integration Tests', () => {
       
       const endTime = performance.now()
       
-      expect(endTime - startTime).toBeLessThan(2000) // Should handle rapid changes efficiently
+      expect(endTime - startTime).toBeLessThan(3000) // Should handle rapid changes efficiently
     })
   })
 

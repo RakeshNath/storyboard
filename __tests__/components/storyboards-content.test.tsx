@@ -228,29 +228,43 @@ describe('StoryboardsContent Component', () => {
       const user = userEvent.setup()
       render(<StoryboardsContent />)
       
-      // Count initial storyboards
-      const initialCount = screen.getAllByText(/Created/).length
+      // Verify initial storyboard exists
+      expect(screen.getByText('The Last Stand')).toBeInTheDocument()
       
-      // Find a delete button
-      const deleteButtons = screen.getAllByRole('button')
-      const deleteButton = deleteButtons.find(button => 
-        button.querySelector('svg') // Trash icon
+      // Find all buttons with SVG (delete buttons)
+      const allButtons = screen.getAllByRole('button')
+      const buttonsWithSVG = allButtons.filter(button => button.querySelector('svg') !== null)
+      
+      // The delete buttons should exist
+      expect(buttonsWithSVG.length).toBeGreaterThan(0)
+      
+      // Find a button that looks like a delete button (small button on card)
+      const deleteButton = buttonsWithSVG.find(btn => 
+        btn.className.includes('h-8') || btn.className.includes('absolute')
+      ) || buttonsWithSVG[buttonsWithSVG.length - 1] // Fallback to last button
+      
+      // Click the delete button
+      await user.click(deleteButton!)
+      
+      // Wait for dialog to appear
+      await waitFor(() => {
+        expect(screen.getByText('Delete Storyboard')).toBeInTheDocument()
+      })
+      
+      // Find and click the confirm delete button in the dialog
+      const dialogButtons = screen.getAllByRole('button')
+      const confirmButton = dialogButtons.find(btn => 
+        btn.textContent === 'Delete' && btn.className.includes('bg-destructive')
       )
       
-      if (deleteButton) {
-        await user.click(deleteButton)
-        
-        // Confirm deletion
-        const confirmDeleteButton = screen.queryByText(/Delete/)
-        if (confirmDeleteButton) {
-          await user.click(confirmDeleteButton)
-        }
-        
-        // Should have one less storyboard (may not be immediate due to async operations)
-        await waitFor(() => {
-          expect(screen.getAllByText(/Created/).length).toBeLessThanOrEqual(initialCount)
-        }, { timeout: 2000 })
+      if (confirmButton) {
+        await user.click(confirmButton)
       }
+      
+      // Dialog should close
+      await waitFor(() => {
+        expect(screen.queryByText('Delete Storyboard')).not.toBeInTheDocument()
+      }, { timeout: 2000 })
     })
 
     it('cancels storyboard deletion', async () => {
@@ -298,14 +312,16 @@ describe('StoryboardsContent Component', () => {
       const user = userEvent.setup()
       render(<StoryboardsContent />)
       
-      // Find a synopsis card and click it
-      const synopsisCard = screen.getByText('Ocean\'s Edge').closest('[class*="cursor-pointer"]')
-      if (synopsisCard) {
-        await user.click(synopsisCard)
-        
+      // Find a synopsis card and click it (synopsis cards have cursor-default, not cursor-pointer)
+      const synopsisCard = screen.getByText('Ocean\'s Edge').closest('[class*="h-64"]')
+      expect(synopsisCard).toBeInTheDocument()
+      
+      await user.click(synopsisCard!)
+      
+      await waitFor(() => {
         expect(screen.getByTestId('synopsis-editor')).toBeInTheDocument()
         expect(screen.getByText('Synopsis Editor - Ocean\'s Edge')).toBeInTheDocument()
-      }
+      })
     })
 
     it('returns to dashboard from screenplay editor', async () => {
@@ -331,19 +347,25 @@ describe('StoryboardsContent Component', () => {
       const user = userEvent.setup()
       render(<StoryboardsContent />)
       
-      // Open synopsis editor
-      const synopsisCard = screen.getByText('Ocean\'s Edge').closest('[class*="cursor-pointer"]')
-      if (synopsisCard) {
-        await user.click(synopsisCard)
-        
-        // Click back button
-        const backButton = screen.getByText('Back to Storyboards')
-        await user.click(backButton)
-        
-        // Should return to dashboard
+      // Open synopsis editor (synopsis cards have cursor-default, not cursor-pointer)
+      const synopsisCard = screen.getByText('Ocean\'s Edge').closest('[class*="h-64"]')
+      expect(synopsisCard).toBeInTheDocument()
+      
+      await user.click(synopsisCard!)
+      
+      await waitFor(() => {
+        expect(screen.getByTestId('synopsis-editor')).toBeInTheDocument()
+      })
+      
+      // Click back button
+      const backButton = screen.getByText('Back to Storyboards')
+      await user.click(backButton)
+      
+      // Should return to dashboard
+      await waitFor(() => {
         expect(screen.queryByTestId('synopsis-editor')).not.toBeInTheDocument()
         expect(screen.getByText('Storyboards')).toBeInTheDocument()
-      }
+      })
     })
   })
 
@@ -511,37 +533,43 @@ describe('StoryboardsContent Component', () => {
       }
     })
 
-    it.skip('clicks create button in empty state', async () => {
-      // Component initializes with mock data, so empty state not accessible in current impl
-      // Empty state line 583 tested indirectly through empty state test at line 376
+    it('verifies delete dialog has cancel button with stopPropagation', async () => {
       const user = userEvent.setup()
-      
-      // Mock component with empty storyboards
-      const mockStoryboards: any[] = []
-      
-      // Re-render component (it initializes with mock data, so we test the button exists)
       render(<StoryboardsContent />)
       
-      // The create button exists (even if not in empty state in current impl)
-      const createButton = screen.getByRole('button', { name: /create storyboard/i })
-      expect(createButton).toBeInTheDocument()
+      // Find and click a delete button to open dialog
+      const deleteButtons = screen.queryAllByRole('button')
+      const deleteButton = deleteButtons.find(button => {
+        const svg = button.querySelector('svg')
+        return svg && button.className.includes('destructive')
+      })
+      
+      if (deleteButton) {
+        await user.click(deleteButton)
+        
+        await waitFor(() => {
+          // Cancel button should exist
+          const cancelButton = screen.queryByRole('button', { name: /cancel/i })
+          expect(cancelButton).toBeInTheDocument()
+        })
+      }
     })
 
     it('verifies synopsis editor opens with correct props', async () => {
       const user = userEvent.setup()
       render(<StoryboardsContent />)
       
-      // Click on a synopsis type storyboard
-      const synopsisCard = screen.getByText('Ocean\'s Edge').closest('[class*="cursor-pointer"]')
-      if (synopsisCard) {
-        await user.click(synopsisCard)
-        
-        // Verify synopsis editor is rendered
-        await waitFor(() => {
-          expect(screen.getByTestId('synopsis-editor')).toBeInTheDocument()
-          expect(screen.getByText('Synopsis Editor - Ocean\'s Edge')).toBeInTheDocument()
-        })
-      }
+      // Click on a synopsis type storyboard (synopsis cards have cursor-default)
+      const synopsisCard = screen.getByText('Ocean\'s Edge').closest('[class*="h-64"]')
+      expect(synopsisCard).toBeInTheDocument()
+      
+      await user.click(synopsisCard!)
+      
+      // Verify synopsis editor is rendered
+      await waitFor(() => {
+        expect(screen.getByTestId('synopsis-editor')).toBeInTheDocument()
+        expect(screen.getByText('Synopsis Editor - Ocean\'s Edge')).toBeInTheDocument()
+      })
     })
   })
 })

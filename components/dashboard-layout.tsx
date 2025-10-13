@@ -13,6 +13,8 @@ import { PlaygroundContent } from "./sections/playground-content"
 import Image from "next/image"
 import { useState, useEffect } from "react"
 import { getUserTheme } from "@/lib/auth"
+import { clearAppStorage } from "@/lib/storage"
+import { DevCachePanel } from "./dev-cache-panel"
 
 interface NavigationItem {
   id: string
@@ -62,20 +64,6 @@ export function DashboardLayout({ user, navigationItems, activeSection, onSectio
     return themeLogos[theme as keyof typeof themeLogos] || "/logos/logo-minimalist.png"
   }
 
-  // Function to get theme border color
-  const getThemeBorderColor = (theme: string) => {
-    const borderColors = {
-      professional: "#3b82f6", // Professional blue
-      dark: "#6366f1", // Classic indigo
-      warm: "#f97316", // Film Noir orange
-      indie: "#a855f7", // Indie Spirit purple
-      minimalist: "#64748b", // Minimalist slate
-      cyberpunk: "#22c55e" // Cyberpunk green
-    }
-    
-    return borderColors[theme as keyof typeof borderColors] || "#3b82f6"
-  }
-
   const handleNavClick = (item: NavigationItem) => {
     if (item.action) {
       item.action()
@@ -85,11 +73,11 @@ export function DashboardLayout({ user, navigationItems, activeSection, onSectio
   }
 
   const handleClearCache = () => {
-    // Clear localStorage
-    localStorage.clear()
+    // Clear application storage (preserves auth)
+    clearAppStorage()
     
     // Show confirmation
-    alert("Cache cleared! The page will refresh in 2 seconds.")
+    alert("✅ Cache cleared! All stored content has been reset. The page will refresh in 2 seconds.")
     
     // Refresh the page after a short delay
     setTimeout(() => {
@@ -237,6 +225,9 @@ export function DashboardLayout({ user, navigationItems, activeSection, onSectio
           </div>
         </div>
       </div>
+
+      {/* Developer Cache Panel (dev only) */}
+      <DevCachePanel />
     </div>
   )
 }

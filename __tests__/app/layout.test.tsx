@@ -146,22 +146,28 @@ describe('RootLayout Component', () => {
     expect(screen.getByText('Footer')).toBeInTheDocument()
   })
 
-  it('handles font variables as objects', () => {
-    // Mock fonts as objects instead of strings
-    jest.doMock('geist/font/sans', () => ({
-      GeistSans: { variable: 'mock-geist-sans-var' },
-    }))
-    
-    jest.doMock('geist/font/mono', () => ({
-      GeistMono: { variable: 'mock-geist-mono-var' },
-    }))
-    
-    render(
+  it('handles font variables as strings (current mock)', () => {
+    // Current mocks return strings - tests one branch of ternary
+    const { container } = render(
       <RootLayout>
         <div data-testid="test-content">Test Content</div>
       </RootLayout>
     )
     
-    expect(screen.getByTestId('test-content')).toBeInTheDocument()
+    const body = container.querySelector('body')
+    expect(body?.className).toContain('mock-geist-sans')
+    expect(body?.className).toContain('mock-geist-mono')
+  })
+
+  it('applies antialiased class to body', () => {
+    const { container } = render(
+      <RootLayout>
+        <div data-testid="test-content">Test Content</div>
+      </RootLayout>
+    )
+    
+    const body = container.querySelector('body')
+    expect(body?.className).toContain('antialiased')
+    expect(body?.className).toContain('font-sans')
   })
 })
