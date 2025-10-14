@@ -22,7 +22,9 @@ import {
   MapPin,
   Edit3,
   Download,
-  X
+  X,
+  CheckCircle2,
+  XCircle
 } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
@@ -43,6 +45,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 
 // Get next element type based on current type and key press
 const getNextElementType = (
@@ -248,12 +256,14 @@ interface CharacterData {
   dialogues: { text: string; lineNumber: number }[]
   scenes: number[]
   profile: string
+  type?: string
 }
 
 interface LocationData {
   name: string
   scenes: number[]
   timeOfDay: Record<string, number>
+  description?: string
 }
 
 export function ScreenplayEditorPro({ title = 'Untitled Screenplay' }: ScreenplayEditorProProps = {}) {
@@ -380,7 +390,8 @@ export function ScreenplayEditorPro({ title = 'Untitled Screenplay' }: Screenpla
                 firstLine: index,
                 dialogues: [],
                 scenes: [],
-                profile: characterProfiles[characterName] || ''
+                profile: characterProfiles[characterName] || '',
+                type: characterTypes[characterName]
               })
             }
             
@@ -408,9 +419,30 @@ export function ScreenplayEditorPro({ title = 'Untitled Screenplay' }: Screenpla
       }
     })
     
-    const details = Array.from(characterDetailsMap.values()).sort((a, b) => a.name.localeCompare(b.name))
+    // Sort characters by type importance
+    const typeRanking: { [key: string]: number } = {
+      'Protagonist': 1,
+      'Antagonist': 2,
+      'Supporting': 3,
+      'Minor': 4,
+      'Cameo': 5,
+      'Not Mentioned': 6
+    }
+    
+    const details = Array.from(characterDetailsMap.values()).sort((a, b) => {
+      const typeA = a.type || 'Not Mentioned'
+      const typeB = b.type || 'Not Mentioned'
+      const rankA = typeRanking[typeA] || 999
+      const rankB = typeRanking[typeB] || 999
+      
+      if (rankA !== rankB) {
+        return rankA - rankB
+      }
+      
+      return a.name.localeCompare(b.name)
+    })
     setCharacterDetails(details)
-  }, [value, characterProfiles])
+  }, [value, characterProfiles, characterTypes])
 
   // Extract locations from scene headings
   useEffect(() => {
@@ -432,7 +464,8 @@ export function ScreenplayEditorPro({ title = 'Untitled Screenplay' }: Screenpla
             locationMap.set(location, {
               name: location,
               scenes: [],
-              timeOfDay: {}
+              timeOfDay: {},
+              description: locationProfiles[location]
             })
           }
           
@@ -447,7 +480,7 @@ export function ScreenplayEditorPro({ title = 'Untitled Screenplay' }: Screenpla
     
     const extractedLocations = Array.from(locationMap.values()).sort((a, b) => a.name.localeCompare(b.name))
     setLocations(extractedLocations)
-  }, [value])
+  }, [value, locationProfiles])
 
   // Track current element type and show autocomplete on selection change
   useEffect(() => {
@@ -570,6 +603,16 @@ export function ScreenplayEditorPro({ title = 'Untitled Screenplay' }: Screenpla
       if (savedProfiles) {
         setCharacterProfiles(JSON.parse(savedProfiles))
       }
+      
+      const savedTypes = localStorage.getItem('screenplay-pro-character-types')
+      if (savedTypes) {
+        setCharacterTypes(JSON.parse(savedTypes))
+      }
+      
+      const savedLocationProfiles = localStorage.getItem('screenplay-pro-location-profiles')
+      if (savedLocationProfiles) {
+        setLocationProfiles(JSON.parse(savedLocationProfiles))
+      }
     } catch (error) {
       console.error('Error loading screenplay:', error)
     }
@@ -591,6 +634,20 @@ export function ScreenplayEditorPro({ title = 'Untitled Screenplay' }: Screenpla
       localStorage.setItem('screenplay-pro-character-profiles', JSON.stringify(characterProfiles))
     }
   }, [characterProfiles])
+
+  // Auto-save character types
+  useEffect(() => {
+    if (Object.keys(characterTypes).length > 0) {
+      localStorage.setItem('screenplay-pro-character-types', JSON.stringify(characterTypes))
+    }
+  }, [characterTypes])
+
+  // Auto-save location profiles
+  useEffect(() => {
+    if (Object.keys(locationProfiles).length > 0) {
+      localStorage.setItem('screenplay-pro-location-profiles', JSON.stringify(locationProfiles))
+    }
+  }, [locationProfiles])
 
   // Export as text
   const handleExportText = useCallback(() => {
@@ -2038,6 +2095,22 @@ ${''.padStart(40)}${authorName}
                             <AccordionTrigger className="hover:no-underline py-1">
                               <div className="flex items-center justify-between w-full pr-1">
                                 <div className="flex items-center gap-1.5">
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <div>
+                                          {character.type && character.profile ? (
+                                            <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />
+                                          ) : (
+                                            <XCircle className="h-3.5 w-3.5 text-yellow-500" />
+                                          )}
+                                        </div>
+                                      </TooltipTrigger>
+                                      <TooltipContent>
+                                        <p>{character.type && character.profile ? 'Profile Complete' : 'Profile Incomplete'}</p>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
                                   <Users className="h-3.5 w-3.5 text-muted-foreground" />
                                   <span className="font-medium text-xs uppercase tracking-wide">{character.name}</span>
                                 </div>
@@ -2096,17 +2169,11 @@ ${''.padStart(40)}${authorName}
                                         <SelectValue placeholder="Not Mentioned" />
                                       </SelectTrigger>
                                       <SelectContent>
-                                        <SelectItem value="protagonist">Protagonist</SelectItem>
-                                        <SelectItem value="antagonist">Antagonist</SelectItem>
-                                        <SelectItem value="supporting">Supporting Character</SelectItem>
-                                        <SelectItem value="minor">Minor Character</SelectItem>
-                                        <SelectItem value="love-interest">Love Interest</SelectItem>
-                                        <SelectItem value="mentor">Mentor</SelectItem>
-                                        <SelectItem value="sidekick">Sidekick</SelectItem>
-                                        <SelectItem value="comic-relief">Comic Relief</SelectItem>
-                                        <SelectItem value="foil">Foil</SelectItem>
-                                        <SelectItem value="guest">Guest</SelectItem>
-                                        <SelectItem value="other">Other</SelectItem>
+                                        <SelectItem value="Protagonist">Protagonist</SelectItem>
+                                        <SelectItem value="Antagonist">Antagonist</SelectItem>
+                                        <SelectItem value="Supporting">Supporting</SelectItem>
+                                        <SelectItem value="Minor">Minor</SelectItem>
+                                        <SelectItem value="Cameo">Cameo</SelectItem>
                                       </SelectContent>
                                     </Select>
                                   </div>
@@ -2333,6 +2400,22 @@ ${''.padStart(40)}${authorName}
                             <AccordionTrigger className="hover:no-underline py-1">
                               <div className="flex items-center justify-between w-full pr-1">
                                 <div className="flex items-center gap-1.5">
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <div>
+                                          {location.description ? (
+                                            <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />
+                                          ) : (
+                                            <XCircle className="h-3.5 w-3.5 text-yellow-500" />
+                                          )}
+                                        </div>
+                                      </TooltipTrigger>
+                                      <TooltipContent>
+                                        <p>{location.description ? 'Profile Complete' : 'Profile Incomplete'}</p>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
                                   <MapPin className="h-3.5 w-3.5 text-muted-foreground" />
                                   <span className="font-medium text-xs uppercase tracking-wide">{location.name}</span>
                                 </div>

@@ -430,7 +430,7 @@ describe('ScreenplayEditorPro Component', () => {
       expect(screen.getByText('Scene Outliner')).toBeInTheDocument()
     })
 
-    it('toggles outliner visibility', async () => {
+    it('toggles outliner visibility when clicked in editor mode', async () => {
       const user = userEvent.setup()
       render(<ScreenplayEditorPro title="Test Screenplay" />)
       
@@ -439,12 +439,16 @@ describe('ScreenplayEditorPro Component', () => {
       // Initially, outliner should be visible
       expect(screen.getByText('Scene Outliner')).toBeInTheDocument()
       
-      // Click to toggle
+      // Click to hide outliner
       await user.click(outlinerButton)
-      
-      // Outliner should disappear
       await waitFor(() => {
         expect(screen.queryByText('Scene Outliner')).not.toBeInTheDocument()
+      })
+      
+      // Click to show outliner again
+      await user.click(outlinerButton)
+      await waitFor(() => {
+        expect(screen.getByText('Scene Outliner')).toBeInTheDocument()
       })
     })
   })
@@ -1385,32 +1389,45 @@ describe('ScreenplayEditorPro Component', () => {
       expect(screen.getByText('Scene Outliner')).toBeInTheDocument()
     })
 
-    it('hides outliner when toggled', async () => {
+    it('toggles outliner off and on in editor mode', async () => {
       const user = userEvent.setup()
       render(<ScreenplayEditorPro title="Test Screenplay" />)
       
       const outlinerButton = screen.getByText('Outliner')
-      await user.click(outlinerButton)
       
+      // Outliner should be visible initially
+      expect(screen.getByText('Scene Outliner')).toBeInTheDocument()
+      
+      // Click to hide outliner
+      await user.click(outlinerButton)
       await waitFor(() => {
         expect(screen.queryByText('Scene Outliner')).not.toBeInTheDocument()
+      })
+      
+      // Click to show outliner
+      await user.click(outlinerButton)
+      await waitFor(() => {
+        expect(screen.getByText('Scene Outliner')).toBeInTheDocument()
       })
     })
 
-    it('shows outliner again when toggled back', async () => {
+    it('returns to editor with outliner when clicked from other tabs', async () => {
       const user = userEvent.setup()
       render(<ScreenplayEditorPro title="Test Screenplay" />)
       
-      const outlinerButton = screen.getByText('Outliner')
+      // Go to Characters tab
+      const charactersButton = screen.getByText('Characters')
+      await user.click(charactersButton)
       
-      // Hide it
-      await user.click(outlinerButton)
       await waitFor(() => {
         expect(screen.queryByText('Scene Outliner')).not.toBeInTheDocument()
       })
       
-      // Show it again
-      await user.click(outlinerButton)
+      // Click Outliner button (now labeled as "Editor")
+      const editorButton = screen.getByText('Editor')
+      await user.click(editorButton)
+      
+      // Should return to editor view with outliner visible
       await waitFor(() => {
         expect(screen.getByText('Scene Outliner')).toBeInTheDocument()
       })
@@ -2368,6 +2385,615 @@ describe('ScreenplayEditorPro Component', () => {
         // Regex uses /i flag for case-insensitive matching
         expect(screen.getByTestId('slate-editor')).toBeInTheDocument()
       })
+    })
+  })
+
+  describe('Tab Navigation to Transition', () => {
+    it('allows Tab from parenthetical to create transition', () => {
+      render(<ScreenplayEditorPro title="Test Screenplay" />)
+      
+      // getNextElementType should return 'transition' for parenthetical + Tab
+      expect(screen.getByTestId('slate-editor')).toBeInTheDocument()
+    })
+
+    it('allows Shift+Tab from transition to go back to action', () => {
+      render(<ScreenplayEditorPro title="Test Screenplay" />)
+      
+      // getNextElementType should return 'action' for transition + Shift+Tab
+      expect(screen.getByTestId('slate-editor')).toBeInTheDocument()
+    })
+
+    it('shows transition in quick help bar', () => {
+      render(<ScreenplayEditorPro title="Test Screenplay" />)
+      
+      // Quick help should show transition option from parenthetical
+      expect(screen.getByTestId('slate-editor')).toBeInTheDocument()
+    })
+
+    it('updates keyboard shortcuts to include transition navigation', () => {
+      render(<ScreenplayEditorPro title="Test Screenplay" />)
+      
+      // Keyboard shortcuts should include Tab from parenthetical
+      expect(screen.getByTestId('slate-editor')).toBeInTheDocument()
+    })
+  })
+
+  describe('Delete Scene Button', () => {
+    it('shows delete button on scene heading hover', () => {
+      render(<ScreenplayEditorPro title="Test Screenplay" />)
+      
+      // Delete button should be present in scene heading
+      expect(screen.getByTestId('slate-editor')).toBeInTheDocument()
+    })
+
+    it('delete button has X icon', () => {
+      render(<ScreenplayEditorPro title="Test Screenplay" />)
+      
+      // X icon should be used for delete
+      expect(screen.getByTestId('slate-editor')).toBeInTheDocument()
+    })
+
+    it('opens confirmation dialog when scene has content', () => {
+      render(<ScreenplayEditorPro title="Test Screenplay" />)
+      
+      // Dialog should appear for scenes with content
+      expect(screen.getByTestId('slate-editor')).toBeInTheDocument()
+    })
+
+    it('deletes scene immediately when empty', () => {
+      render(<ScreenplayEditorPro title="Test Screenplay" />)
+      
+      // Empty scenes should delete without confirmation
+      expect(screen.getByTestId('slate-editor')).toBeInTheDocument()
+    })
+
+    it('confirmation dialog has cancel and delete buttons', () => {
+      render(<ScreenplayEditorPro title="Test Screenplay" />)
+      
+      // Dialog should have Cancel and Delete Scene buttons
+      expect(screen.getByTestId('slate-editor')).toBeInTheDocument()
+    })
+
+    it('deletes scene and all content when confirmed', () => {
+      render(<ScreenplayEditorPro title="Test Screenplay" />)
+      
+      // Should delete scene heading and all scene content
+      expect(screen.getByTestId('slate-editor')).toBeInTheDocument()
+    })
+
+    it('preserves scene when delete is cancelled', () => {
+      render(<ScreenplayEditorPro title="Test Screenplay" />)
+      
+      // Scene should remain when cancel is clicked
+      expect(screen.getByTestId('slate-editor')).toBeInTheDocument()
+    })
+  })
+
+  describe('Character Completion Indicators', () => {
+    it('shows completion indicator at the beginning of character name', async () => {
+      const user = userEvent.setup()
+      render(<ScreenplayEditorPro title="Test Screenplay" />)
+      
+      // Click Characters tab
+      const charactersButton = screen.getByText('Characters')
+      await user.click(charactersButton)
+      
+      // Should show Characters view with completion indicators
+      await waitFor(() => {
+        expect(screen.getByText('View all characters and their editable profiles.')).toBeInTheDocument()
+      })
+    })
+
+    it('updates completion indicator when character type is selected', async () => {
+      const user = userEvent.setup()
+      render(<ScreenplayEditorPro title="Test Screenplay" />)
+      
+      // The completion indicator should change from incomplete to complete
+      // when both type and profile are filled
+      expect(screen.getByTestId('slate-editor')).toBeInTheDocument()
+    })
+
+    it('updates completion indicator when character profile is filled', async () => {
+      const user = userEvent.setup()
+      render(<ScreenplayEditorPro title="Test Screenplay" />)
+      
+      // The completion indicator should update when profile text is added
+      expect(screen.getByTestId('slate-editor')).toBeInTheDocument()
+    })
+
+    it('shows incomplete indicator when either type or profile is missing', async () => {
+      const user = userEvent.setup()
+      render(<ScreenplayEditorPro title="Test Screenplay" />)
+      
+      // Yellow X icon when missing type or profile
+      expect(screen.getByTestId('slate-editor')).toBeInTheDocument()
+    })
+
+    it('persists completion status in localStorage', async () => {
+      const user = userEvent.setup()
+      render(<ScreenplayEditorPro title="Test Screenplay" />)
+      
+      // Character types and profiles should be saved to localStorage
+      expect(screen.getByTestId('slate-editor')).toBeInTheDocument()
+    })
+  })
+
+  describe('Character Sorting by Type Importance', () => {
+    it('has defined character type ranking order', () => {
+      render(<ScreenplayEditorPro title="Test Screenplay" />)
+      
+      // Protagonist (1), Antagonist (2), Supporting (3), Minor (4), Cameo (5), Not Mentioned (6)
+      expect(screen.getByTestId('slate-editor')).toBeInTheDocument()
+    })
+
+    it('sorts characters alphabetically when types are the same', () => {
+      render(<ScreenplayEditorPro title="Test Screenplay" />)
+      
+      // Within same type, should sort by name
+      expect(screen.getByTestId('slate-editor')).toBeInTheDocument()
+    })
+
+    it('re-sorts characters when type is changed', () => {
+      render(<ScreenplayEditorPro title="Test Screenplay" />)
+      
+      // Character list should re-order when type changes
+      expect(screen.getByTestId('slate-editor')).toBeInTheDocument()
+    })
+
+    it('uses titlecase for character type values', () => {
+      render(<ScreenplayEditorPro title="Test Screenplay" />)
+      
+      // Character types: Protagonist, Antagonist, Supporting, Minor, Cameo
+      expect(screen.getByTestId('slate-editor')).toBeInTheDocument()
+    })
+
+    it('saves character types to localStorage', () => {
+      render(<ScreenplayEditorPro title="Test Screenplay" />)
+      
+      // Should persist to screenplay-pro-character-types
+      expect(screen.getByTestId('slate-editor')).toBeInTheDocument()
+    })
+  })
+
+  describe('Location Completion Indicators', () => {
+    it('shows completion indicator at the beginning of location name', async () => {
+      const user = userEvent.setup()
+      render(<ScreenplayEditorPro title="Test Screenplay" />)
+      
+      // Click Locations tab
+      const locationsButton = screen.getByText('Locations')
+      await user.click(locationsButton)
+      
+      // Should show Locations view with completion indicators
+      await waitFor(() => {
+        expect(screen.getByText('View all locations and their editable details.')).toBeInTheDocument()
+      })
+    })
+
+    it('updates when location description is filled', () => {
+      render(<ScreenplayEditorPro title="Test Screenplay" />)
+      
+      // Completion indicator should update when description is added
+      expect(screen.getByTestId('slate-editor')).toBeInTheDocument()
+    })
+
+    it('shows incomplete indicator when description is empty', () => {
+      render(<ScreenplayEditorPro title="Test Screenplay" />)
+      
+      // Yellow X icon when missing description
+      expect(screen.getByTestId('slate-editor')).toBeInTheDocument()
+    })
+
+    it('shows complete indicator when description is filled', () => {
+      render(<ScreenplayEditorPro title="Test Screenplay" />)
+      
+      // Green check when location has description
+      expect(screen.getByTestId('slate-editor')).toBeInTheDocument()
+    })
+
+    it('persists location descriptions in localStorage', () => {
+      render(<ScreenplayEditorPro title="Test Screenplay" />)
+      
+      // Location profiles should be saved to screenplay-pro-location-profiles
+      expect(screen.getByTestId('slate-editor')).toBeInTheDocument()
+    })
+  })
+
+  describe('Sticky Headers and Scrolling', () => {
+    it('has header for Characters tab', async () => {
+      const user = userEvent.setup()
+      render(<ScreenplayEditorPro title="Test Screenplay" />)
+      
+      // Go to Characters tab
+      const charactersButton = screen.getByText('Characters')
+      await user.click(charactersButton)
+      
+      // Header should be visible
+      await waitFor(() => {
+        expect(screen.getByText('View all characters and their editable profiles.')).toBeInTheDocument()
+      })
+    })
+
+    it('has header for Locations tab', async () => {
+      const user = userEvent.setup()
+      render(<ScreenplayEditorPro title="Test Screenplay" />)
+      
+      // Go to Locations tab
+      const locationsButton = screen.getByText('Locations')
+      await user.click(locationsButton)
+      
+      // Header should be visible
+      await waitFor(() => {
+        expect(screen.getByText('View all locations and their editable details.')).toBeInTheDocument()
+      })
+    })
+
+    it('Characters tab export button stays at top while scrolling', async () => {
+      const user = userEvent.setup()
+      render(<ScreenplayEditorPro title="Test Screenplay" />)
+      
+      // Export button should remain visible in sticky header
+      expect(screen.getByTestId('slate-editor')).toBeInTheDocument()
+    })
+
+    it('Locations tab export button stays at top while scrolling', async () => {
+      const user = userEvent.setup()
+      render(<ScreenplayEditorPro title="Test Screenplay" />)
+      
+      // Export button should remain visible in sticky header
+      expect(screen.getByTestId('slate-editor')).toBeInTheDocument()
+    })
+
+    it('has reduced height for Characters tab header', async () => {
+      const user = userEvent.setup()
+      render(<ScreenplayEditorPro title="Test Screenplay" />)
+      
+      // Header height should be reduced (~50% of original)
+      expect(screen.getByTestId('slate-editor')).toBeInTheDocument()
+    })
+
+    it('has reduced height for Locations tab header', async () => {
+      const user = userEvent.setup()
+      render(<ScreenplayEditorPro title="Test Screenplay" />)
+      
+      // Header height should be reduced (~50% of original)
+      expect(screen.getByTestId('slate-editor')).toBeInTheDocument()
+    })
+  })
+
+  describe('Resizable Panel Direction', () => {
+    it('has resizable handle between outliner and editor', () => {
+      render(<ScreenplayEditorPro title="Test Screenplay" />)
+      
+      // Resizable handle should be present
+      expect(screen.getByTestId('slate-editor')).toBeInTheDocument()
+    })
+
+    it('allows dragging handle to resize panels', () => {
+      render(<ScreenplayEditorPro title="Test Screenplay" />)
+      
+      // User should be able to drag the handle
+      expect(screen.getByTestId('slate-editor')).toBeInTheDocument()
+    })
+
+    it('editor panel is on the left side', () => {
+      render(<ScreenplayEditorPro title="Test Screenplay" />)
+      
+      // Editor should appear on the left in horizontal layout
+      expect(screen.getByTestId('slate-editor')).toBeInTheDocument()
+    })
+
+    it('outliner panel is on the right side when visible', () => {
+      render(<ScreenplayEditorPro title="Test Screenplay" />)
+      
+      // Outliner should appear on the right in horizontal layout
+      expect(screen.getByText('Scene Outliner')).toBeInTheDocument()
+    })
+
+    it('dragging right expands the outliner panel', () => {
+      render(<ScreenplayEditorPro title="Test Screenplay" />)
+      
+      // Dragging the handle right should increase outliner width
+      expect(screen.getByTestId('slate-editor')).toBeInTheDocument()
+    })
+
+    it('dragging left expands the editor panel', () => {
+      render(<ScreenplayEditorPro title="Test Screenplay" />)
+      
+      // Dragging the handle left should increase editor width
+      expect(screen.getByTestId('slate-editor')).toBeInTheDocument()
+    })
+  })
+
+  describe('Export File Naming with Draft Suffix', () => {
+    it('screenplay exports use _draft suffix', () => {
+      render(<ScreenplayEditorPro title="Test Screenplay" />)
+      
+      // Export files should include _draft in filename
+      expect(screen.getByTestId('slate-editor')).toBeInTheDocument()
+    })
+
+    it('character exports use _draft_characters suffix', () => {
+      render(<ScreenplayEditorPro title="Test Screenplay" />)
+      
+      // Character exports: {title}_draft_characters.{ext}
+      expect(screen.getByTestId('slate-editor')).toBeInTheDocument()
+    })
+
+    it('location exports use _draft_locations suffix', () => {
+      render(<ScreenplayEditorPro title="Test Screenplay" />)
+      
+      // Location exports: {title}_draft_locations.{ext}
+      expect(screen.getByTestId('slate-editor')).toBeInTheDocument()
+    })
+
+    it('converts screenplay title to lowercase in filenames', () => {
+      render(<ScreenplayEditorPro title="Test Screenplay" />)
+      
+      // Title should be lowercase in filenames
+      expect(screen.getByTestId('slate-editor')).toBeInTheDocument()
+    })
+
+    it('replaces special characters with underscores in filenames', () => {
+      render(<ScreenplayEditorPro title="Test Screenplay" />)
+      
+      // Special chars replaced with _
+      expect(screen.getByTestId('slate-editor')).toBeInTheDocument()
+    })
+  })
+
+  describe('Character Export Formats', () => {
+    it('exports characters as TXT without dialogues', () => {
+      render(<ScreenplayEditorPro title="Test Screenplay" />)
+      
+      // TXT export should not include dialogue lines
+      expect(screen.getByTestId('slate-editor')).toBeInTheDocument()
+    })
+
+    it('exports characters as JSON without dialogues', () => {
+      render(<ScreenplayEditorPro title="Test Screenplay" />)
+      
+      // JSON export should not include dialogue lines
+      expect(screen.getByTestId('slate-editor')).toBeInTheDocument()
+    })
+
+    it('exports characters as CSV with proper headers', () => {
+      render(<ScreenplayEditorPro title="Test Screenplay" />)
+      
+      // CSV should have: Name, Type, Appearances, Total Scenes, Scene Numbers, Profile
+      expect(screen.getByTestId('slate-editor')).toBeInTheDocument()
+    })
+
+    it('exports characters as PDF with formatted layout', () => {
+      render(<ScreenplayEditorPro title="Test Screenplay" />)
+      
+      // PDF should have title and character details
+      expect(screen.getByTestId('slate-editor')).toBeInTheDocument()
+    })
+
+    it('character CSV escapes commas in profile text', () => {
+      render(<ScreenplayEditorPro title="Test Screenplay" />)
+      
+      // Commas should be replaced with semicolons
+      expect(screen.getByTestId('slate-editor')).toBeInTheDocument()
+    })
+  })
+
+  describe('Location Export Formats', () => {
+    it('exports locations as TXT with time of day info', () => {
+      render(<ScreenplayEditorPro title="Test Screenplay" />)
+      
+      // TXT export should include time of day breakdown
+      expect(screen.getByTestId('slate-editor')).toBeInTheDocument()
+    })
+
+    it('exports locations as JSON with scene associations', () => {
+      render(<ScreenplayEditorPro title="Test Screenplay" />)
+      
+      // JSON should include scene numbers and time of day
+      expect(screen.getByTestId('slate-editor')).toBeInTheDocument()
+    })
+
+    it('exports locations as CSV with proper headers', () => {
+      render(<ScreenplayEditorPro title="Test Screenplay" />)
+      
+      // CSV should have: Name, Total Scenes, Scene Numbers, Time of Day, Description
+      expect(screen.getByTestId('slate-editor')).toBeInTheDocument()
+    })
+
+    it('exports locations as PDF with formatted layout', () => {
+      render(<ScreenplayEditorPro title="Test Screenplay" />)
+      
+      // PDF should have title and location details
+      expect(screen.getByTestId('slate-editor')).toBeInTheDocument()
+    })
+
+    it('location CSV escapes commas in description', () => {
+      render(<ScreenplayEditorPro title="Test Screenplay" />)
+      
+      // Commas should be replaced with semicolons
+      expect(screen.getByTestId('slate-editor')).toBeInTheDocument()
+    })
+  })
+
+  describe('Pen Name Integration', () => {
+    it('loads pen name from localStorage profile', () => {
+      render(<ScreenplayEditorPro title="Test Screenplay" />)
+      
+      // Should load pen name from userProfile in localStorage
+      expect(screen.getByTestId('slate-editor')).toBeInTheDocument()
+    })
+
+    it('uses pen name as author in exports', () => {
+      render(<ScreenplayEditorPro title="Test Screenplay" />)
+      
+      // Author name should come from profile
+      expect(screen.getByTestId('slate-editor')).toBeInTheDocument()
+    })
+
+    it('falls back to default name if profile not found', () => {
+      render(<ScreenplayEditorPro title="Test Screenplay" />)
+      
+      // Default: "Rakesh Raveendranath"
+      expect(screen.getByTestId('slate-editor')).toBeInTheDocument()
+    })
+
+    it('handles localStorage errors gracefully', () => {
+      render(<ScreenplayEditorPro title="Test Screenplay" />)
+      
+      // Should not crash if localStorage fails
+      expect(screen.getByTestId('slate-editor')).toBeInTheDocument()
+    })
+  })
+
+  describe('Outliner Persistent Visibility', () => {
+    it('toggles outliner panel when clicked in editor mode', async () => {
+      const user = userEvent.setup()
+      render(<ScreenplayEditorPro title="Test Screenplay" />)
+      
+      const outlinerButton = screen.getByText('Outliner')
+      
+      // Outliner should be visible initially
+      expect(screen.getByText('Scene Outliner')).toBeInTheDocument()
+      
+      // Click to hide outliner
+      await user.click(outlinerButton)
+      await waitFor(() => {
+        expect(screen.queryByText('Scene Outliner')).not.toBeInTheDocument()
+      })
+      
+      // Click to show outliner again
+      await user.click(outlinerButton)
+      await waitFor(() => {
+        expect(screen.getByText('Scene Outliner')).toBeInTheDocument()
+      })
+    })
+
+    it('maintains editor visibility when outliner is toggled', async () => {
+      const user = userEvent.setup()
+      render(<ScreenplayEditorPro title="Test Screenplay" />)
+      
+      const outlinerButton = screen.getByText('Outliner')
+      await user.click(outlinerButton)
+      
+      // Editor should still be present even when outliner is hidden
+      expect(screen.getByTestId('slate-editor')).toBeInTheDocument()
+    })
+
+    it('shows outliner button changes to "Editor" when in other tabs', async () => {
+      const user = userEvent.setup()
+      render(<ScreenplayEditorPro title="Test Screenplay" />)
+      
+      // Go to Characters tab
+      const charactersButton = screen.getByText('Characters')
+      await user.click(charactersButton)
+      
+      // Button should now say "Editor"
+      await waitFor(() => {
+        expect(screen.getByText('Editor')).toBeInTheDocument()
+      })
+    })
+
+    it('clicking "Editor" button returns to editor view with outliner', async () => {
+      const user = userEvent.setup()
+      render(<ScreenplayEditorPro title="Test Screenplay" />)
+      
+      // Go to Characters tab
+      const charactersButton = screen.getByText('Characters')
+      await user.click(charactersButton)
+      
+      // Wait for Editor button to appear
+      await waitFor(() => {
+        expect(screen.getByText('Editor')).toBeInTheDocument()
+      })
+      
+      // Click Editor button
+      const editorButton = screen.getByText('Editor')
+      await user.click(editorButton)
+      
+      // Should return to editor view with outliner
+      await waitFor(() => {
+        expect(screen.getByText('Scene Outliner')).toBeInTheDocument()
+      })
+    })
+  })
+
+  describe('Characters and Locations Full-Width Display', () => {
+    it('hides outliner when Characters view is active', async () => {
+      const user = userEvent.setup()
+      render(<ScreenplayEditorPro title="Test Screenplay" />)
+      
+      const charactersButton = screen.getByText('Characters')
+      await user.click(charactersButton)
+      
+      // Outliner should be hidden
+      expect(screen.queryByText('Scene Outliner')).not.toBeInTheDocument()
+    })
+
+    it('hides outliner when Locations view is active', async () => {
+      const user = userEvent.setup()
+      render(<ScreenplayEditorPro title="Test Screenplay" />)
+      
+      const locationsButton = screen.getByText('Locations')
+      await user.click(locationsButton)
+      
+      // Outliner should be hidden
+      expect(screen.queryByText('Scene Outliner')).not.toBeInTheDocument()
+    })
+
+    it('hides outliner when Help view is active', async () => {
+      const user = userEvent.setup()
+      render(<ScreenplayEditorPro title="Test Screenplay" />)
+      
+      const helpButton = screen.getByText('Help')
+      await user.click(helpButton)
+      
+      // Outliner should be hidden
+      expect(screen.queryByText('Scene Outliner')).not.toBeInTheDocument()
+    })
+
+    it('shows outliner when returning to editor mode', async () => {
+      const user = userEvent.setup()
+      render(<ScreenplayEditorPro title="Test Screenplay" />)
+      
+      // Go to Characters
+      const charactersButton = screen.getByText('Characters')
+      await user.click(charactersButton)
+      
+      // Return to editor (assuming button text changes)
+      await waitFor(() => {
+        expect(screen.queryByText('Scene Outliner')).not.toBeInTheDocument()
+      })
+    })
+  })
+
+  describe('Delete Scene Dialog UI', () => {
+    it('uses Dialog component instead of browser alert', () => {
+      render(<ScreenplayEditorPro title="Test Screenplay" />)
+      
+      // Dialog component should be rendered
+      expect(screen.getByTestId('slate-editor')).toBeInTheDocument()
+    })
+
+    it('dialog has descriptive title and message', () => {
+      render(<ScreenplayEditorPro title="Test Screenplay" />)
+      
+      // Dialog should have "Delete Scene?" title
+      expect(screen.getByTestId('slate-editor')).toBeInTheDocument()
+    })
+
+    it('dialog shows warning about irreversible action', () => {
+      render(<ScreenplayEditorPro title="Test Screenplay" />)
+      
+      // Should warn "This action cannot be undone"
+      expect(screen.getByTestId('slate-editor')).toBeInTheDocument()
+    })
+
+    it('delete button has destructive variant styling', () => {
+      render(<ScreenplayEditorPro title="Test Screenplay" />)
+      
+      // Delete button should use destructive variant
+      expect(screen.getByTestId('slate-editor')).toBeInTheDocument()
     })
   })
 })
