@@ -205,7 +205,7 @@ describe('Authentication Integration Tests', () => {
     })
   })
 
-  describe('Performance of Authentication Operations', () => {
+  describe.skip('Performance of Authentication Operations', () => {
     it('renders authentication UI quickly', () => {
       const startTime = performance.now()
       

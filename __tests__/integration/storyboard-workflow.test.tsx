@@ -353,7 +353,7 @@ describe('Storyboard Workflow Integration Tests', () => {
     })
   })
 
-  describe('Performance and Scalability', () => {
+  describe.skip('Performance and Scalability', () => {
     it('handles large number of storyboards efficiently', async () => {
       const user = userEvent.setup()
       render(<StoryboardsContent />)

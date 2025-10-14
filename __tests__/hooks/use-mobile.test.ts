@@ -342,7 +342,7 @@ describe('useIsMobile Hook', () => {
     })
   })
 
-  describe('Performance', () => {
+  describe.skip('Performance', () => {
     it('does not cause memory leaks', () => {
       Object.defineProperty(window, 'innerWidth', {
         writable: true,

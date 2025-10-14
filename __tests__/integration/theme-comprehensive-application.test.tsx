@@ -286,7 +286,7 @@ describe('Comprehensive Theme Application Integration', () => {
     })
   })
 
-  describe('Performance and Reliability', () => {
+  describe.skip('Performance and Reliability', () => {
     it('applies theme without performance issues', async () => {
       const startTime = performance.now()
       

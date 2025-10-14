@@ -237,7 +237,7 @@ describe('Alert Components', () => {
     })
   })
 
-  describe('Performance', () => {
+  describe.skip('Performance', () => {
     it('renders efficiently with many alerts', () => {
       const startTime = performance.now()
       

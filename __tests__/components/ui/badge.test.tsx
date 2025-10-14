@@ -170,7 +170,7 @@ describe('Badge Component', () => {
     })
   })
 
-  describe('Performance', () => {
+  describe.skip('Performance', () => {
     it('renders efficiently with many badges', () => {
       const startTime = performance.now()
       

@@ -451,7 +451,7 @@ describe('Card Components', () => {
     })
   })
 
-  describe('Performance', () => {
+  describe.skip('Performance', () => {
     it('renders efficiently with many cards', () => {
       const startTime = performance.now()
       

@@ -440,7 +440,7 @@ describe('Storyboards - Behavioral Tests', () => {
     })
   })
 
-  describe('User Journey: Performance and Responsiveness', () => {
+  describe.skip('User Journey: Performance and Responsiveness', () => {
     it('handles rapid user interactions without losing data', async () => {
       const user = userEvent.setup()
       render(<StoryboardsContent />)

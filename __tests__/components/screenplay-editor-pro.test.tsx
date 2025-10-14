@@ -156,6 +156,20 @@ jest.mock('@/components/ui/separator', () => ({
   Separator: ({ className, ...props }: any) => <div className={className} {...props} />,
 }))
 
+jest.mock('@/components/ui/checkbox', () => ({
+  Checkbox: ({ id, checked, disabled, onCheckedChange, ...props }: any) => (
+    <input
+      type="checkbox"
+      id={id}
+      checked={checked}
+      disabled={disabled}
+      onChange={(e) => onCheckedChange && onCheckedChange(e.target.checked)}
+      data-testid={`checkbox-${id}`}
+      {...props}
+    />
+  ),
+}))
+
 jest.mock('@/components/ui/dialog', () => ({
   Dialog: ({ children, open, onOpenChange }: any) => (
     open ? <div data-testid="dialog">{children}</div> : null
@@ -214,6 +228,10 @@ jest.mock('lucide-react', () => ({
   MapPin: () => <span data-testid="map-pin-icon">MapPin</span>,
   Edit3: () => <span data-testid="edit3-icon">Edit3</span>,
   Download: () => <span data-testid="download-icon">Download</span>,
+  XIcon: () => <span data-testid="x-icon">X</span>,
+  X: () => <span data-testid="x-icon">X</span>,
+  CheckCircle2: () => <span data-testid="check-circle-icon">CheckCircle2</span>,
+  XCircle: () => <span data-testid="x-circle-icon">XCircle</span>,
 }))
 
 describe('ScreenplayEditorPro Component', () => {
@@ -2994,6 +3012,380 @@ describe('ScreenplayEditorPro Component', () => {
       
       // Delete button should use destructive variant
       expect(screen.getByTestId('slate-editor')).toBeInTheDocument()
+    })
+  })
+
+  describe('Screenplay Export Dialog', () => {
+    it('opens export dialog when export button is clicked', async () => {
+      const user = userEvent.setup()
+      render(<ScreenplayEditorPro title="Test Screenplay" />)
+      
+      // Find and click the export button
+      const exportButtons = screen.getAllByText('Export')
+      const screenplayExportButton = exportButtons[0] // First export button is for screenplay
+      await user.click(screenplayExportButton)
+      
+      // Dialog should open
+      await waitFor(() => {
+        expect(screen.getByText('Export Screenplay')).toBeInTheDocument()
+      })
+    })
+
+    it('closes export dialog when cancel is clicked', async () => {
+      const user = userEvent.setup()
+      render(<ScreenplayEditorPro title="Test Screenplay" />)
+      
+      const exportButtons = screen.getAllByText('Export')
+      await user.click(exportButtons[0])
+      
+      await waitFor(() => {
+        expect(screen.getByText('Export Screenplay')).toBeInTheDocument()
+      })
+      
+      const cancelButton = screen.getByRole('button', { name: /cancel/i })
+      await user.click(cancelButton)
+      
+      await waitFor(() => {
+        expect(screen.queryByText('Export Screenplay')).not.toBeInTheDocument()
+      })
+    })
+
+    it('displays file format dropdown in export dialog', async () => {
+      const user = userEvent.setup()
+      render(<ScreenplayEditorPro title="Test Screenplay" />)
+      
+      const exportButtons = screen.getAllByText('Export')
+      await user.click(exportButtons[0])
+      
+      await waitFor(() => {
+        expect(screen.getByText('File Format')).toBeInTheDocument()
+      })
+    })
+
+    it('displays export option checkboxes', async () => {
+      const user = userEvent.setup()
+      render(<ScreenplayEditorPro title="Test Screenplay" />)
+      
+      const exportButtons = screen.getAllByText('Export')
+      await user.click(exportButtons[0])
+      
+      await waitFor(() => {
+        expect(screen.getByText('Scene Titles (required)')).toBeInTheDocument()
+        expect(screen.getByText('Scene Synopsis')).toBeInTheDocument()
+        expect(screen.getByText(/Scene Content.*dialogue.*action/)).toBeInTheDocument()
+      })
+    })
+
+    it('scene titles checkbox is disabled', async () => {
+      const user = userEvent.setup()
+      render(<ScreenplayEditorPro title="Test Screenplay" />)
+      
+      const exportButtons = screen.getAllByText('Export')
+      await user.click(exportButtons[0])
+      
+      await waitFor(() => {
+        const sceneTitlesCheckbox = screen.getByLabelText('Scene Titles (required)')
+        expect(sceneTitlesCheckbox).toBeDisabled()
+        expect(sceneTitlesCheckbox).toBeChecked()
+      })
+    })
+
+    it('scene synopsis and scene content checkboxes are unchecked by default', async () => {
+      const user = userEvent.setup()
+      render(<ScreenplayEditorPro title="Test Screenplay" />)
+      
+      const exportButtons = screen.getAllByText('Export')
+      await user.click(exportButtons[0])
+      
+      await waitFor(() => {
+        const synopsisCheckbox = screen.getByLabelText('Scene Synopsis')
+        const contentCheckbox = screen.getByLabelText(/Scene Content/)
+        expect(synopsisCheckbox).not.toBeChecked()
+        expect(contentCheckbox).not.toBeChecked()
+      })
+    })
+
+    it('allows toggling scene synopsis checkbox', async () => {
+      const user = userEvent.setup()
+      render(<ScreenplayEditorPro title="Test Screenplay" />)
+      
+      const exportButtons = screen.getAllByText('Export')
+      await user.click(exportButtons[0])
+      
+      await waitFor(() => {
+        const synopsisCheckbox = screen.getByLabelText('Scene Synopsis')
+        expect(synopsisCheckbox).not.toBeChecked()
+      })
+      
+      const synopsisCheckbox = screen.getByLabelText('Scene Synopsis')
+      await user.click(synopsisCheckbox)
+      
+      await waitFor(() => {
+        expect(synopsisCheckbox).toBeChecked()
+      })
+    })
+
+    it('allows toggling scene content checkbox', async () => {
+      const user = userEvent.setup()
+      render(<ScreenplayEditorPro title="Test Screenplay" />)
+      
+      const exportButtons = screen.getAllByText('Export')
+      await user.click(exportButtons[0])
+      
+      await waitFor(() => {
+        const contentCheckbox = screen.getByLabelText(/Scene Content/)
+        expect(contentCheckbox).not.toBeChecked()
+      })
+      
+      const contentCheckbox = screen.getByLabelText(/Scene Content/)
+      await user.click(contentCheckbox)
+      
+      await waitFor(() => {
+        expect(contentCheckbox).toBeChecked()
+      })
+    })
+  })
+
+  describe('Location Export Dialog', () => {
+    it('navigates to locations page', async () => {
+      const user = userEvent.setup()
+      render(<ScreenplayEditorPro title="Test Screenplay" />)
+      
+      // Navigate to Locations tab
+      const locationsButton = screen.getByRole('button', { name: /Locations/i })
+      await user.click(locationsButton)
+      
+      // Should see Locations header
+      await waitFor(() => {
+        expect(screen.getByRole('heading', { name: 'Locations' })).toBeInTheDocument()
+      })
+    })
+
+    it('shows empty state when no locations exist', async () => {
+      const user = userEvent.setup()
+      render(<ScreenplayEditorPro title="Test Screenplay" />)
+      
+      const locationsButton = screen.getByRole('button', { name: /Locations/i })
+      await user.click(locationsButton)
+      
+      // Should see empty state message
+      await waitFor(() => {
+        expect(screen.getByText('No locations yet. Add scene headings to see locations here.')).toBeInTheDocument()
+      })
+    })
+
+    it('location export button only shows when locations exist', async () => {
+      const user = userEvent.setup()
+      render(<ScreenplayEditorPro title="Test Screenplay" />)
+      
+      const locationsButton = screen.getByRole('button', { name: /Locations/i })
+      await user.click(locationsButton)
+      
+      await waitFor(() => {
+        expect(screen.getByRole('heading', { name: 'Locations' })).toBeInTheDocument()
+      })
+      
+      // Export button should not be visible when no locations exist
+      const exportButtons = screen.queryAllByTitle('Export Locations')
+      expect(exportButtons.length).toBe(0)
+    })
+  })
+
+  describe('Location Character Tracking', () => {
+    it('displays locations page with proper header', async () => {
+      const user = userEvent.setup()
+      render(<ScreenplayEditorPro title="Test Screenplay" />)
+      
+      // Navigate to Locations
+      const locationsButton = screen.getByRole('button', { name: /Locations/i })
+      await user.click(locationsButton)
+      
+      await waitFor(() => {
+        expect(screen.getByRole('heading', { name: 'Locations' })).toBeInTheDocument()
+        expect(screen.getByText('View all locations and their editable details.')).toBeInTheDocument()
+      })
+    })
+  })
+
+  describe('Location Display Layout', () => {
+    it('shows locations page when location button is clicked', async () => {
+      const user = userEvent.setup()
+      render(<ScreenplayEditorPro title="Test Screenplay" />)
+      
+      const locationsButton = screen.getByRole('button', { name: /Locations/i })
+      await user.click(locationsButton)
+      
+      await waitFor(() => {
+        expect(screen.getByRole('heading', { name: 'Locations' })).toBeInTheDocument()
+      })
+    })
+  })
+
+  describe('Export Format Selection', () => {
+    it('screenplay export dialog has default format as txt', async () => {
+      const user = userEvent.setup()
+      render(<ScreenplayEditorPro title="Test Screenplay" />)
+      
+      const exportButtons = screen.getAllByText('Export')
+      await user.click(exportButtons[0])
+      
+      await waitFor(() => {
+        expect(screen.getByText('Export Screenplay')).toBeInTheDocument()
+        expect(screen.getByText('File Format')).toBeInTheDocument()
+      })
+    })
+
+    it('location export dialog has default format as json', async () => {
+      const user = userEvent.setup()
+      render(<ScreenplayEditorPro title="Test Screenplay" />)
+      
+      const locationsButton = screen.getByText('Locations')
+      await user.click(locationsButton)
+      
+      await waitFor(() => {
+        expect(screen.getByText('Locations')).toBeInTheDocument()
+      })
+    })
+  })
+
+
+  describe('Export Default Selections', () => {
+    it('screenplay export format defaults to txt', async () => {
+      const user = userEvent.setup()
+      render(<ScreenplayEditorPro title="Test Screenplay" />)
+      
+      const exportButtons = screen.getAllByText('Export')
+      await user.click(exportButtons[0])
+      
+      await waitFor(() => {
+        expect(screen.getByText('Export Screenplay')).toBeInTheDocument()
+      })
+      
+      // Default format should be available
+      expect(screen.getByText('File Format')).toBeInTheDocument()
+    })
+
+    it('screenplay scene titles checkbox is checked and disabled by default', async () => {
+      const user = userEvent.setup()
+      render(<ScreenplayEditorPro title="Test Screenplay" />)
+      
+      const exportButtons = screen.getAllByText('Export')
+      await user.click(exportButtons[0])
+      
+      await waitFor(() => {
+        const sceneTitlesCheckbox = screen.getByLabelText('Scene Titles (required)')
+        expect(sceneTitlesCheckbox).toBeChecked()
+        expect(sceneTitlesCheckbox).toBeDisabled()
+      })
+    })
+
+    it('screenplay scene synopsis is unchecked by default', async () => {
+      const user = userEvent.setup()
+      render(<ScreenplayEditorPro title="Test Screenplay" />)
+      
+      const exportButtons = screen.getAllByText('Export')
+      await user.click(exportButtons[0])
+      
+      await waitFor(() => {
+        const synopsisCheckbox = screen.getByLabelText('Scene Synopsis')
+        expect(synopsisCheckbox).not.toBeChecked()
+        expect(synopsisCheckbox).not.toBeDisabled()
+      })
+    })
+
+    it('screenplay scene content is unchecked by default', async () => {
+      const user = userEvent.setup()
+      render(<ScreenplayEditorPro title="Test Screenplay" />)
+      
+      const exportButtons = screen.getAllByText('Export')
+      await user.click(exportButtons[0])
+      
+      await waitFor(() => {
+        const contentCheckbox = screen.getByLabelText(/Scene Content/)
+        expect(contentCheckbox).not.toBeChecked()
+        expect(contentCheckbox).not.toBeDisabled()
+      })
+    })
+  })
+
+  describe('Location Export Default Selections', () => {
+    it('location page is accessible', async () => {
+      const user = userEvent.setup()
+      render(<ScreenplayEditorPro title="Test Screenplay" />)
+      
+      const locationsButton = screen.getByRole('button', { name: /Locations/i })
+      await user.click(locationsButton)
+      
+      await waitFor(() => {
+        expect(screen.getByRole('heading', { name: 'Locations' })).toBeInTheDocument()
+      })
+      
+      // Since no locations exist in mock, we can't test the dialog
+      // But we can verify the locations page loads
+      expect(screen.getByText('No locations yet. Add scene headings to see locations here.')).toBeInTheDocument()
+    })
+  })
+
+
+  describe('Export Button Integration', () => {
+    it('screenplay export button exists in toolbar', () => {
+      render(<ScreenplayEditorPro title="Test Screenplay" />)
+      
+      // Export button should exist
+      const exportButtons = screen.getAllByText('Export')
+      expect(exportButtons.length).toBeGreaterThan(0)
+    })
+
+    it('location page renders correctly', async () => {
+      const user = userEvent.setup()
+      render(<ScreenplayEditorPro title="Test Screenplay" />)
+      
+      const locationsButton = screen.getByRole('button', { name: /Locations/i })
+      await user.click(locationsButton)
+      
+      await waitFor(() => {
+        expect(screen.getByRole('heading', { name: 'Locations' })).toBeInTheDocument()
+      })
+      
+      // Export button should not be visible when no locations
+      const exportButtons = screen.queryAllByTitle('Export Locations')
+      expect(exportButtons.length).toBe(0)
+    })
+  })
+
+  describe('Checkbox State Management', () => {
+    it('export dialog checkboxes can be toggled independently', async () => {
+      const user = userEvent.setup()
+      render(<ScreenplayEditorPro title="Test Screenplay" />)
+      
+      const exportButtons = screen.getAllByText('Export')
+      await user.click(exportButtons[0])
+      
+      await waitFor(() => {
+        expect(screen.getByText('Export Screenplay')).toBeInTheDocument()
+      })
+      
+      // Get both checkboxes
+      const synopsisCheckbox = screen.getByLabelText('Scene Synopsis')
+      const contentCheckbox = screen.getByLabelText(/Scene Content/)
+      
+      // Both should be unchecked initially
+      expect(synopsisCheckbox).not.toBeChecked()
+      expect(contentCheckbox).not.toBeChecked()
+      
+      // Toggle synopsis
+      await user.click(synopsisCheckbox)
+      await waitFor(() => {
+        expect(synopsisCheckbox).toBeChecked()
+        expect(contentCheckbox).not.toBeChecked() // Should not affect other checkbox
+      })
+      
+      // Toggle content
+      await user.click(contentCheckbox)
+      await waitFor(() => {
+        expect(synopsisCheckbox).toBeChecked()
+        expect(contentCheckbox).toBeChecked()
+      })
     })
   })
 })

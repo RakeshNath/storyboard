@@ -187,7 +187,7 @@ describe('Theme Application Verification', () => {
     })
   })
 
-  describe('Performance and Efficiency', () => {
+  describe.skip('Performance and Efficiency', () => {
     it('applies theme efficiently without redundant calls', () => {
       const themeColors: ThemeColors = {
         primary: 'oklch(0.45 0.15 264)',

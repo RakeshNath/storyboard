@@ -36,6 +36,7 @@ import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Checkbox } from '@/components/ui/checkbox'
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable'
 import {
   Dialog,
@@ -264,6 +265,7 @@ interface LocationData {
   scenes: number[]
   timeOfDay: Record<string, number>
   description?: string
+  characters: string[] // Characters appearing in this location
 }
 
 export function ScreenplayEditorPro({ title = 'Untitled Screenplay' }: ScreenplayEditorProProps = {}) {
@@ -272,9 +274,22 @@ export function ScreenplayEditorPro({ title = 'Untitled Screenplay' }: Screenpla
   const [showCharacters, setShowCharacters] = useState(false)
   const [showLocations, setShowLocations] = useState(false)
   const [showOutliner, setShowOutliner] = useState(true)
-  const [showExportMenu, setShowExportMenu] = useState(false)
+  const [showExportDialog, setShowExportDialog] = useState(false)
+  const [exportFormat, setExportFormat] = useState<'txt' | 'pdf' | 'fdx'>('txt')
+  const [exportOptions, setExportOptions] = useState({
+    sceneTitles: true,  // Always true and disabled
+    sceneSynopsis: false,
+    sceneContent: false
+  })
   const [showCharacterExportMenu, setShowCharacterExportMenu] = useState(false)
-  const [showLocationExportMenu, setShowLocationExportMenu] = useState(false)
+  const [showLocationExportDialog, setShowLocationExportDialog] = useState(false)
+  const [locationExportFormat, setLocationExportFormat] = useState<'json' | 'txt' | 'csv' | 'pdf'>('json')
+  const [locationExportOptions, setLocationExportOptions] = useState({
+    locationDescription: false,
+    sceneList: false,
+    characterList: false,
+    completeScenes: false
+  })
   const [scenes, setScenes] = useState<{ id: string; text: string; lineNumber: number }[]>([])
   const [characters, setCharacters] = useState<{ name: string; appearances: number; firstLine: number }[]>([])
   const [characterDetails, setCharacterDetails] = useState<CharacterData[]>([])
@@ -448,35 +463,69 @@ export function ScreenplayEditorPro({ title = 'Untitled Screenplay' }: Screenpla
   useEffect(() => {
     const locationMap = new Map<string, LocationData>()
     let sceneNumber = 0
+    let currentLocation = ''
+    let currentSceneCharacters = new Set<string>()
     
-    value.forEach((node) => {
-      if (SlateElement.isElement(node) && node.type === 'scene-heading') {
-        sceneNumber++
-        const sceneText = Node.string(node).trim()
-        
-        // Parse scene heading: INT./EXT. LOCATION - TIME
-        const match = sceneText.match(/^(INT\.?|EXT\.?|INT\.?\/EXT\.?|EXT\.?\/INT\.?)\s+(.+?)\s+-\s+(.+)$/i)
-        if (match && match[2] && match[3]) {
-          const location = match[2].trim().toUpperCase()
-          const timeOfDay = match[3].trim().toUpperCase()
-          
-          if (!locationMap.has(location)) {
-            locationMap.set(location, {
-              name: location,
-              scenes: [],
-              timeOfDay: {},
-              description: locationProfiles[location]
+    value.forEach((node, index) => {
+      if (SlateElement.isElement(node)) {
+        if (node.type === 'scene-heading') {
+          // Save characters from previous scene to previous location
+          if (currentLocation && locationMap.has(currentLocation)) {
+            const locationData = locationMap.get(currentLocation)!
+            currentSceneCharacters.forEach(char => {
+              if (!locationData.characters.includes(char)) {
+                locationData.characters.push(char)
+              }
             })
           }
           
-          const locationData = locationMap.get(location)!
-          locationData.scenes.push(sceneNumber)
+          // Start new scene
+          sceneNumber++
+          currentSceneCharacters.clear()
+          const sceneText = Node.string(node).trim()
           
-          // Count time of day occurrences
-          locationData.timeOfDay[timeOfDay] = (locationData.timeOfDay[timeOfDay] || 0) + 1
+          // Parse scene heading: INT./EXT. LOCATION - TIME
+          const match = sceneText.match(/^(INT\.?|EXT\.?|INT\.?\/EXT\.?|EXT\.?\/INT\.?)\s+(.+?)\s+-\s+(.+)$/i)
+          if (match && match[2] && match[3]) {
+            const location = match[2].trim().toUpperCase()
+            const timeOfDay = match[3].trim().toUpperCase()
+            currentLocation = location
+            
+            if (!locationMap.has(location)) {
+              locationMap.set(location, {
+                name: location,
+                scenes: [],
+                timeOfDay: {},
+                description: locationProfiles[location],
+                characters: []
+              })
+            }
+            
+            const locationData = locationMap.get(location)!
+            locationData.scenes.push(sceneNumber)
+            
+            // Count time of day occurrences
+            locationData.timeOfDay[timeOfDay] = (locationData.timeOfDay[timeOfDay] || 0) + 1
+          }
+        } else if (node.type === 'character' && currentLocation) {
+          // Track characters in current scene
+          const characterName = Node.string(node).trim().toUpperCase()
+          if (characterName) {
+            currentSceneCharacters.add(characterName)
+          }
         }
       }
     })
+    
+    // Save characters from last scene
+    if (currentLocation && locationMap.has(currentLocation)) {
+      const locationData = locationMap.get(currentLocation)!
+      currentSceneCharacters.forEach(char => {
+        if (!locationData.characters.includes(char)) {
+          locationData.characters.push(char)
+        }
+      })
+    }
     
     const extractedLocations = Array.from(locationMap.values()).sort((a, b) => a.name.localeCompare(b.name))
     setLocations(extractedLocations)
@@ -713,6 +762,16 @@ ${''.padStart(40)}${authorName}
             const text = Node.string(node)
             const type = node.type
             
+            // Filter based on export options
+            if (type === 'scene-heading' && !exportOptions.sceneTitles) {
+              return ''
+            }
+            
+            // Skip non-scene-heading content if sceneContent is disabled
+            if (type !== 'scene-heading' && !exportOptions.sceneContent) {
+              return ''
+            }
+            
             switch (type) {
               case 'scene-heading':
                 return `\n${text.toUpperCase()}\n`
@@ -752,7 +811,7 @@ ${''.padStart(40)}${authorName}
       console.error('Error exporting formatted text:', error)
       alert('Error exporting formatted text file. Please try again.')
     }
-  }, [value, screenplayTitle, authorName])
+  }, [value, screenplayTitle, authorName, exportOptions])
 
   // Export as PDF
   const handleExportPDF = useCallback(async () => {
@@ -820,6 +879,17 @@ ${''.padStart(40)}${authorName}
           if (!text.trim()) return
 
           const type = node.type
+          
+          // Filter based on export options
+          if (type === 'scene-heading' && !exportOptions.sceneTitles) {
+            return
+          }
+          
+          // Skip non-scene-heading content if sceneContent is disabled
+          if (type !== 'scene-heading' && !exportOptions.sceneContent) {
+            return
+          }
+          
           let fontSize = 12
           let fontStyle: 'normal' | 'bold' = 'normal'
           let xPosition = margin
@@ -918,7 +988,482 @@ ${''.padStart(40)}${authorName}
       console.error('Error exporting PDF:', error)
       alert('Error exporting PDF. Please try again.')
     }
-  }, [value, screenplayTitle, authorName])
+  }, [value, screenplayTitle, authorName, exportOptions])
+
+  // Handle export from dialog
+  const handleExport = useCallback(() => {
+    setShowExportDialog(false)
+    
+    switch (exportFormat) {
+      case 'txt':
+        handleExportFormatted()
+        break
+      case 'pdf':
+        handleExportPDF()
+        break
+      case 'fdx':
+        // Coming soon
+        alert('Final Draft export is coming soon!')
+        break
+    }
+  }, [exportFormat, handleExportFormatted, handleExportPDF])
+
+  // Helper function to get scene content
+  const getSceneContent = useCallback((sceneNumber: number) => {
+    let currentSceneNum = 0
+    let sceneContent: any[] = []
+    let inTargetScene = false
+    
+    value.forEach((node) => {
+      if (SlateElement.isElement(node)) {
+        if (node.type === 'scene-heading') {
+          currentSceneNum++
+          if (currentSceneNum === sceneNumber) {
+            inTargetScene = true
+            sceneContent.push({
+              type: node.type,
+              text: Node.string(node)
+            })
+          } else if (inTargetScene) {
+            inTargetScene = false
+          }
+        } else if (inTargetScene) {
+          sceneContent.push({
+            type: node.type,
+            text: Node.string(node)
+          })
+        }
+      }
+    })
+    
+    return sceneContent
+  }, [value])
+
+  // Location export handlers
+  const handleLocationExportJSON = useCallback(() => {
+    const exportData = locations.map((location) => {
+      const data: any = {
+        name: location.name,
+        totalScenes: location.scenes.length,
+      }
+      
+      if (locationExportOptions.sceneList) {
+        data.sceneNumbers = location.scenes
+      }
+      
+      if (locationExportOptions.characterList) {
+        data.characters = location.characters
+      }
+      
+      if (locationExportOptions.completeScenes) {
+        data.scenes = location.scenes.map(sceneNum => ({
+          sceneNumber: sceneNum,
+          content: getSceneContent(sceneNum)
+        }))
+      }
+      
+      if (locationExportOptions.locationDescription) {
+        data.description = locationProfiles[location.name] || ''
+      }
+      
+      return data
+    })
+    
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `${screenplayTitle.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_draft_locations.json`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }, [locations, locationProfiles, screenplayTitle, locationExportOptions, getSceneContent])
+
+  const handleLocationExportTXT = useCallback(() => {
+    const text = locations.map((location, index) => {
+      let output = `LOCATION: ${location.name}\nTotal Scenes: ${location.scenes.length}\n`
+      
+      if (locationExportOptions.sceneList) {
+        output += `Scene Numbers: ${location.scenes.join(', ')}\n`
+      }
+      
+      if (locationExportOptions.characterList) {
+        const charactersStr = location.characters.length > 0 
+          ? location.characters.join(', ') 
+          : 'None'
+        output += `Characters: ${charactersStr}\n`
+      }
+      
+      if (locationExportOptions.locationDescription) {
+        const description = locationProfiles[location.name] || 'No description'
+        output += `Description: ${description}\n`
+      }
+      
+      if (locationExportOptions.completeScenes) {
+        output += `\n${'='.repeat(80)}\n\nCOMPLETE SCENES:\n\n`
+        
+        location.scenes.forEach((sceneNum) => {
+          const sceneContent = getSceneContent(sceneNum)
+          output += `--- SCENE ${sceneNum} ---\n\n`
+          
+          sceneContent.forEach((element) => {
+            const text = element.text
+            switch (element.type) {
+              case 'scene-heading':
+                output += `${text.toUpperCase()}\n\n`
+                break
+              case 'action':
+                output += `${text}\n\n`
+                break
+              case 'character':
+                output += `${''.padStart(35)}${text.toUpperCase()}\n`
+                break
+              case 'dialogue':
+                output += `${''.padStart(25)}${text}\n`
+                break
+              case 'parenthetical':
+                output += `${''.padStart(30)}(${text})\n`
+                break
+              case 'transition':
+                output += `${''.padStart(60)}${text.toUpperCase()}\n\n`
+                break
+            }
+          })
+          
+          output += `\n`
+        })
+      }
+      
+      // Add page break between locations if complete scenes are included
+      const separator = locationExportOptions.completeScenes && index < locations.length - 1
+        ? `\n${'='.repeat(80)}\n\f\n`  // Form feed for page break
+        : `\n${'='.repeat(80)}\n`
+      
+      return output + separator
+    }).join('\n')
+    
+    const blob = new Blob([text], { type: 'text/plain' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `${screenplayTitle.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_draft_locations.txt`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }, [locations, locationProfiles, screenplayTitle, locationExportOptions, getSceneContent])
+
+  const handleLocationExportCSV = useCallback(() => {
+    // Build header row based on selected options
+    const headers = ['Name', 'Total Scenes']
+    if (locationExportOptions.sceneList) headers.push('Scene Numbers')
+    if (locationExportOptions.characterList) headers.push('Characters')
+    if (locationExportOptions.completeScenes) headers.push('Complete Scenes Content')
+    if (locationExportOptions.locationDescription) headers.push('Description')
+    
+    const rows = locations.map((location) => {
+      const row = [location.name, location.scenes.length.toString()]
+      
+      if (locationExportOptions.sceneList) {
+        row.push(location.scenes.join('; '))
+      }
+      
+      if (locationExportOptions.characterList) {
+        row.push(location.characters.length > 0 ? location.characters.join('; ') : 'None')
+      }
+      
+      if (locationExportOptions.completeScenes) {
+        const scenesContent = location.scenes.map(sceneNum => {
+          const sceneContent = getSceneContent(sceneNum)
+          const sceneText = sceneContent.map(el => el.text).join(' ')
+          return `Scene ${sceneNum}: ${sceneText}`
+        }).join(' | ')
+        row.push(scenesContent.replace(/,/g, ';'))
+      }
+      
+      if (locationExportOptions.locationDescription) {
+        row.push((locationProfiles[location.name] || 'No description').replace(/,/g, ';'))
+      }
+      
+      return row
+    })
+    
+    const csv = [headers, ...rows].map(row => row.join(',')).join('\n')
+    
+    const blob = new Blob([csv], { type: 'text/csv' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `${screenplayTitle.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_draft_locations.csv`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }, [locations, locationProfiles, screenplayTitle, locationExportOptions, getSceneContent])
+
+  const handleLocationExportPDF = useCallback(async () => {
+    const { jsPDF } = await import('jspdf')
+    const doc = new jsPDF()
+    const margin = 25
+    const pageWidth = doc.internal.pageSize.getWidth()
+    const pageHeight = doc.internal.pageSize.getHeight()
+    let yPosition = margin
+    
+    // Create Title Page
+    doc.setFont('times', 'bold')
+    doc.setFontSize(24)
+    
+    // Title - centered vertically and horizontally
+    const titleY = pageHeight / 2 - 50
+    const titleLines = doc.splitTextToSize(screenplayTitle.toUpperCase(), pageWidth - 2 * margin)
+    titleLines.forEach((line: string, index: number) => {
+      const titleWidth = doc.getTextWidth(line)
+      const titleX = (pageWidth - titleWidth) / 2
+      doc.text(line, titleX, titleY + (index * 28))
+    })
+    
+    // Export Type - below title
+    doc.setFont('times', 'normal')
+    doc.setFontSize(16)
+    const exportTypeY = titleY + (titleLines.length * 28) + 40
+    const exportTypeText = 'Locations Export'
+    const exportTypeWidth = doc.getTextWidth(exportTypeText)
+    const exportTypeX = (pageWidth - exportTypeWidth) / 2
+    doc.text(exportTypeText, exportTypeX, exportTypeY)
+    
+    // Add subtitle about what's included
+    doc.setFont('times', 'italic')
+    doc.setFontSize(11)
+    const subtitleY = exportTypeY + 30
+    const includedItems: string[] = []
+    if (locationExportOptions.locationDescription) includedItems.push('Descriptions')
+    if (locationExportOptions.characterList) includedItems.push('Characters')
+    if (locationExportOptions.sceneList) includedItems.push('Scene Lists')
+    if (locationExportOptions.completeScenes) includedItems.push('Complete Scenes')
+    
+    if (includedItems.length > 0) {
+      const subtitleText = `Including: ${includedItems.join(', ')}`
+      const subtitleWidth = doc.getTextWidth(subtitleText)
+      const subtitleX = (pageWidth - subtitleWidth) / 2
+      doc.text(subtitleText, subtitleX, subtitleY)
+    }
+    
+    // Add new page for locations content
+    doc.addPage()
+    yPosition = margin
+    
+    const checkPageBreak = (spaceNeeded = 20) => {
+      if (yPosition + spaceNeeded > pageHeight - margin) {
+        doc.addPage()
+        yPosition = margin
+        return true
+      }
+      return false
+    }
+    
+    locations.forEach((location, locationIndex) => {
+      // Start each location on a new page if not the first one AND complete scenes are included
+      if (locationIndex > 0 && locationExportOptions.completeScenes) {
+        doc.addPage()
+        yPosition = margin
+      }
+      
+      // Check if we need a page break before starting this location
+      if (locationIndex > 0 && !locationExportOptions.completeScenes) {
+        checkPageBreak(60)
+      }
+      
+      // Location Name - Heading 1 (Georgia Bold)
+      doc.setFont('times', 'bold')
+      doc.setFontSize(22)
+      doc.text(location.name, margin, yPosition)
+      yPosition += 12
+      
+      // Underline
+      doc.setLineWidth(0.5)
+      doc.line(margin, yPosition, pageWidth - margin, yPosition)
+      yPosition += 10
+      
+      // Location Description (if selected)
+      if (locationExportOptions.locationDescription) {
+        const description = locationProfiles[location.name]
+        if (description && description.trim()) {
+          doc.setFont('times', 'italic')
+          doc.setFontSize(11)
+          doc.setTextColor(60, 60, 60)
+          const descLines = doc.splitTextToSize(description, pageWidth - 2 * margin)
+          doc.text(descLines, margin, yPosition)
+          yPosition += descLines.length * 6 + 8
+          doc.setTextColor(0, 0, 0)
+        }
+      }
+      
+      // Characters in Scene (if selected)
+      if (locationExportOptions.characterList && location.characters.length > 0) {
+        checkPageBreak(30)
+        
+        doc.setFont('times', 'bold')
+        doc.setFontSize(14)
+        doc.text('Characters', margin, yPosition)
+        yPosition += 8
+        
+        doc.setFont('times', 'normal')
+        doc.setFontSize(11)
+        const charactersStr = location.characters.join(', ')
+        const charLines = doc.splitTextToSize(charactersStr, pageWidth - 2 * margin)
+        doc.text(charLines, margin, yPosition)
+        yPosition += charLines.length * 6 + 8
+      }
+      
+      // List of Scenes (if selected)
+      if (locationExportOptions.sceneList) {
+        checkPageBreak(30)
+        
+        doc.setFont('times', 'bold')
+        doc.setFontSize(14)
+        doc.text(`Scenes (${location.scenes.length})`, margin, yPosition)
+        yPosition += 8
+        
+        doc.setFont('times', 'normal')
+        doc.setFontSize(11)
+        doc.text(location.scenes.map(s => `Scene ${s}`).join(', '), margin, yPosition)
+        yPosition += 10
+      }
+      
+      // Complete Scenes (if selected)
+      if (locationExportOptions.completeScenes) {
+        checkPageBreak(40)
+        
+        doc.setFont('times', 'bold')
+        doc.setFontSize(16)
+        doc.text('Complete Scenes', margin, yPosition)
+        yPosition += 12
+        
+        location.scenes.forEach((sceneNum, sceneIndex) => {
+          const sceneContent = getSceneContent(sceneNum)
+          
+          checkPageBreak(35)
+          
+          // Scene Number Header
+          doc.setFont('times', 'bold')
+          doc.setFontSize(13)
+          doc.setTextColor(40, 40, 40)
+          doc.text(`Scene ${sceneNum}`, margin, yPosition)
+          yPosition += 8
+          doc.setTextColor(0, 0, 0)
+          
+          // Scene Content
+          doc.setFont('times', 'normal')
+          doc.setFontSize(11)
+          
+          sceneContent.forEach((element) => {
+            const text = element.text
+            if (!text.trim()) return
+            
+            checkPageBreak(15)
+            
+            switch (element.type) {
+              case 'scene-heading':
+                doc.setFont('times', 'bold')
+                doc.setFontSize(12)
+                const headingLines = doc.splitTextToSize(text.toUpperCase(), pageWidth - 2 * margin - 10)
+                doc.text(headingLines, margin + 5, yPosition)
+                yPosition += headingLines.length * 6 + 4
+                doc.setFont('times', 'normal')
+                doc.setFontSize(11)
+                break
+                
+              case 'action':
+                const actionLines = doc.splitTextToSize(text, pageWidth - 2 * margin - 10)
+                actionLines.forEach((line: string) => {
+                  checkPageBreak(10)
+                  doc.text(line, margin + 5, yPosition)
+                  yPosition += 5.5
+                })
+                yPosition += 3
+                break
+                
+              case 'character':
+                checkPageBreak(10)
+                doc.setFont('times', 'bold')
+                doc.text(text.toUpperCase(), margin + 50, yPosition)
+                yPosition += 6
+                doc.setFont('times', 'normal')
+                break
+                
+              case 'dialogue':
+                const dialogueLines = doc.splitTextToSize(text, 100)
+                dialogueLines.forEach((line: string) => {
+                  checkPageBreak(10)
+                  doc.text(line, margin + 30, yPosition)
+                  yPosition += 5.5
+                })
+                yPosition += 2
+                break
+                
+              case 'parenthetical':
+                checkPageBreak(10)
+                doc.setFont('times', 'italic')
+                doc.text(`(${text})`, margin + 40, yPosition)
+                yPosition += 6
+                doc.setFont('times', 'normal')
+                break
+                
+              case 'transition':
+                checkPageBreak(10)
+                doc.setFont('times', 'bold')
+                doc.text(text.toUpperCase(), pageWidth - margin, yPosition, { align: 'right' })
+                yPosition += 8
+                doc.setFont('times', 'normal')
+                break
+            }
+          })
+          
+          // Space between scenes
+          if (sceneIndex < location.scenes.length - 1) {
+            yPosition += 8
+            doc.setDrawColor(200, 200, 200)
+            doc.setLineWidth(0.3)
+            doc.line(margin + 5, yPosition, pageWidth - margin - 5, yPosition)
+            yPosition += 8
+          }
+        })
+      }
+      
+      // Add spacing between locations if complete scenes are NOT included
+      if (!locationExportOptions.completeScenes && locationIndex < locations.length - 1) {
+        yPosition += 15
+        // Add a separator line between locations
+        doc.setDrawColor(150, 150, 150)
+        doc.setLineWidth(0.5)
+        doc.line(margin, yPosition, pageWidth - margin, yPosition)
+        yPosition += 15
+      }
+    })
+    
+    doc.save(`${screenplayTitle.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_draft_locations.pdf`)
+  }, [locations, locationProfiles, screenplayTitle, locationExportOptions, getSceneContent])
+
+  // Handle location export from dialog
+  const handleLocationExport = useCallback(() => {
+    setShowLocationExportDialog(false)
+    
+    switch (locationExportFormat) {
+      case 'json':
+        handleLocationExportJSON()
+        break
+      case 'txt':
+        handleLocationExportTXT()
+        break
+      case 'csv':
+        handleLocationExportCSV()
+        break
+      case 'pdf':
+        handleLocationExportPDF()
+        break
+    }
+  }, [locationExportFormat, handleLocationExportJSON, handleLocationExportTXT, handleLocationExportCSV, handleLocationExportPDF])
 
   // Check if scene has content
   const checkSceneHasContent = useCallback((element: CustomElement): boolean => {
@@ -1833,66 +2378,16 @@ ${''.padStart(40)}${authorName}
               {/* Export Panel */}
               <Card className="px-1.5 py-1 bg-muted/30 flex-shrink-0 flex items-center">
                 <div className="flex items-center leading-none">
-                  <div className="relative">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      title="Export Screenplay"
-                      className="h-5 px-1 text-[10px] gap-0.5"
-                      onClick={() => setShowExportMenu(!showExportMenu)}
-                    >
-                      <FileDown className="h-2.5 w-2.5" />
-                      Export
-                      <ChevronDown className="h-2 w-2" />
-                    </Button>
-                    
-                    {showExportMenu && (
-                      <>
-                        <div 
-                          className="fixed inset-0 z-40" 
-                          onClick={() => setShowExportMenu(false)}
-                        />
-                        <div className="absolute right-0 top-full mt-1 w-56 bg-popover text-popover-foreground rounded-md border shadow-lg z-50">
-                          <div className="p-2">
-                            <div className="px-2 py-1.5 text-sm font-medium">Export Options</div>
-                            <div className="my-1 h-px bg-border" />
-                            
-                            <button
-                              onClick={() => {
-                                handleExportFormatted()
-                                setShowExportMenu(false)
-                              }}
-                              className="w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded-sm hover:bg-accent hover:text-accent-foreground cursor-pointer"
-                            >
-                              <FileDown className="h-3.5 w-3.5" />
-                              Text File (.txt)
-                            </button>
-                            
-                            <button
-                              onClick={() => {
-                                handleExportPDF()
-                                setShowExportMenu(false)
-                              }}
-                              className="w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded-sm hover:bg-accent hover:text-accent-foreground cursor-pointer"
-                            >
-                              <FileDown className="h-3.5 w-3.5" />
-                              PDF Document (.pdf)
-                            </button>
-                            
-                            <div className="my-1 h-px bg-border" />
-                            
-                            <button
-                              disabled
-                              className="w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded-sm opacity-50 cursor-not-allowed"
-                            >
-                              <FileDown className="h-3.5 w-3.5" />
-                              Final Draft (.fdx) (Coming Soon)
-                            </button>
-                          </div>
-                        </div>
-                      </>
-                    )}
-                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    title="Export Screenplay"
+                    className="h-5 px-1 text-[10px] gap-0.5"
+                    onClick={() => setShowExportDialog(true)}
+                  >
+                    <FileDown className="h-2.5 w-2.5" />
+                    Export
+                  </Button>
                 </div>
               </Card>
             </div>
@@ -2027,13 +2522,35 @@ ${''.padStart(40)}${authorName}
                                           import('jspdf').then(({ jsPDF }) => {
                                             const doc = new jsPDF()
                                             const margin = 20
+                                            const pageWidth = doc.internal.pageSize.getWidth()
+                                            const pageHeight = doc.internal.pageSize.getHeight()
                                             let yPosition = margin
                                             
-                                            // Title
-                                            doc.setFontSize(18)
-                                            doc.setFont('helvetica', 'bold')
-                                            doc.text(`${screenplayTitle} - Characters`, margin, yPosition)
-                                            yPosition += 15
+                                            // Create Title Page
+                                            doc.setFont('times', 'bold')
+                                            doc.setFontSize(24)
+                                            
+                                            // Title - centered vertically and horizontally
+                                            const titleY = pageHeight / 2 - 50
+                                            const titleLines = doc.splitTextToSize(screenplayTitle.toUpperCase(), pageWidth - 2 * margin)
+                                            titleLines.forEach((line: string, index: number) => {
+                                              const titleWidth = doc.getTextWidth(line)
+                                              const titleX = (pageWidth - titleWidth) / 2
+                                              doc.text(line, titleX, titleY + (index * 28))
+                                            })
+                                            
+                                            // Export Type - below title
+                                            doc.setFont('times', 'normal')
+                                            doc.setFontSize(16)
+                                            const exportTypeY = titleY + (titleLines.length * 28) + 40
+                                            const exportTypeText = 'Characters Export'
+                                            const exportTypeWidth = doc.getTextWidth(exportTypeText)
+                                            const exportTypeX = (pageWidth - exportTypeWidth) / 2
+                                            doc.text(exportTypeText, exportTypeX, exportTypeY)
+                                            
+                                            // Add new page for character content
+                                            doc.addPage()
+                                            yPosition = margin
                                             
                                             doc.setFontSize(10)
                                             doc.setFont('helvetica', 'normal')
@@ -2216,173 +2733,16 @@ ${''.padStart(40)}${authorName}
                       {locations.length > 0 && (
                         <Card className="px-1.5 py-1 bg-muted/30 flex-shrink-0 flex items-center">
                           <div className="flex items-center leading-none">
-                            <div className="relative">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                title="Export Locations"
-                                className="h-5 px-1 text-[10px] gap-0.5"
-                                onClick={() => setShowLocationExportMenu(!showLocationExportMenu)}
-                              >
-                                <FileDown className="h-2.5 w-2.5" />
-                                Export
-                                <ChevronDown className="h-2 w-2" />
-                              </Button>
-                              
-                              {showLocationExportMenu && (
-                                <>
-                                  <div 
-                                    className="fixed inset-0 z-40" 
-                                    onClick={() => setShowLocationExportMenu(false)}
-                                  />
-                                  <div className="absolute right-0 top-full mt-1 w-48 bg-popover border rounded-md shadow-md z-50">
-                                    <div className="p-1">
-                                      <div className="px-2 py-1.5 text-sm font-medium">Export Options</div>
-                                      <div className="my-1 h-px bg-border" />
-                                      
-                                      <button
-                                        onClick={() => {
-                                          const exportData = locations.map((location) => ({
-                                            name: location.name,
-                                            totalScenes: location.scenes.length,
-                                            sceneNumbers: location.scenes,
-                                            timeOfDayBreakdown: location.timeOfDay,
-                                            description: locationProfiles[location.name] || ''
-                                          }))
-                                          
-                                          const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' })
-                                          const url = URL.createObjectURL(blob)
-                                          const a = document.createElement('a')
-                                          a.href = url
-                                          a.download = `${screenplayTitle.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_draft_locations.json`
-                                          document.body.appendChild(a)
-                                          a.click()
-                                          document.body.removeChild(a)
-                                          URL.revokeObjectURL(url)
-                                          setShowLocationExportMenu(false)
-                                        }}
-                                        className="w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded-sm hover:bg-accent hover:text-accent-foreground cursor-pointer"
-                                      >
-                                        <FileDown className="h-3.5 w-3.5" />
-                                        JSON File (.json)
-                                      </button>
-                                      
-                                      <button
-                                        onClick={() => {
-                                          const text = locations.map((location) => {
-                                            const description = locationProfiles[location.name] || 'No description'
-                                            const timeOfDayStr = Object.entries(location.timeOfDay)
-                                              .map(([time, count]) => `${time}: ${count}x`)
-                                              .join(', ')
-                                            return `LOCATION: ${location.name}\nTotal Scenes: ${location.scenes.length}\nScene Numbers: ${location.scenes.join(', ')}\nTime of Day: ${timeOfDayStr}\nDescription: ${description}\n\n${'='.repeat(80)}\n`
-                                          }).join('\n')
-                                          
-                                          const blob = new Blob([text], { type: 'text/plain' })
-                                          const url = URL.createObjectURL(blob)
-                                          const a = document.createElement('a')
-                                          a.href = url
-                                          a.download = `${screenplayTitle.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_draft_locations.txt`
-                                          document.body.appendChild(a)
-                                          a.click()
-                                          document.body.removeChild(a)
-                                          URL.revokeObjectURL(url)
-                                          setShowLocationExportMenu(false)
-                                        }}
-                                        className="w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded-sm hover:bg-accent hover:text-accent-foreground cursor-pointer"
-                                      >
-                                        <FileDown className="h-3.5 w-3.5" />
-                                        Text File (.txt)
-                                      </button>
-                                      
-                                      <button
-                                        onClick={() => {
-                                          const csv = [
-                                            ['Name', 'Total Scenes', 'Scene Numbers', 'Time of Day', 'Description'],
-                                            ...locations.map((location) => [
-                                              location.name,
-                                              location.scenes.length.toString(),
-                                              location.scenes.join('; '),
-                                              Object.entries(location.timeOfDay).map(([time, count]) => `${time}:${count}`).join('; '),
-                                              (locationProfiles[location.name] || 'No description').replace(/,/g, ';')
-                                            ])
-                                          ].map(row => row.join(',')).join('\n')
-                                          
-                                          const blob = new Blob([csv], { type: 'text/csv' })
-                                          const url = URL.createObjectURL(blob)
-                                          const a = document.createElement('a')
-                                          a.href = url
-                                          a.download = `${screenplayTitle.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_draft_locations.csv`
-                                          document.body.appendChild(a)
-                                          a.click()
-                                          document.body.removeChild(a)
-                                          URL.revokeObjectURL(url)
-                                          setShowLocationExportMenu(false)
-                                        }}
-                                        className="w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded-sm hover:bg-accent hover:text-accent-foreground cursor-pointer"
-                                      >
-                                        <FileDown className="h-3.5 w-3.5" />
-                                        CSV File (.csv)
-                                      </button>
-                                      
-                                      <button
-                                        onClick={() => {
-                                          import('jspdf').then(({ jsPDF }) => {
-                                            const doc = new jsPDF()
-                                            const margin = 20
-                                            let yPosition = margin
-                                            
-                                            // Title
-                                            doc.setFontSize(18)
-                                            doc.setFont('helvetica', 'bold')
-                                            doc.text(`${screenplayTitle} - Locations`, margin, yPosition)
-                                            yPosition += 15
-                                            
-                                            doc.setFontSize(10)
-                                            doc.setFont('helvetica', 'normal')
-                                            
-                                            locations.forEach((location) => {
-                                              // Check if we need a new page
-                                              if (yPosition > 270) {
-                                                doc.addPage()
-                                                yPosition = margin
-                                              }
-                                              
-                                              doc.setFont('helvetica', 'bold')
-                                              doc.text(`${location.name}`, margin, yPosition)
-                                              yPosition += 6
-                                              
-                                              doc.setFont('helvetica', 'normal')
-                                              doc.text(`Total Scenes: ${location.scenes.length}`, margin + 5, yPosition)
-                                              yPosition += 5
-                                              doc.text(`Scene Numbers: ${location.scenes.join(', ')}`, margin + 5, yPosition)
-                                              yPosition += 5
-                                              
-                                              const timeOfDayStr = Object.entries(location.timeOfDay)
-                                                .map(([time, count]) => `${time}: ${count}x`)
-                                                .join(', ')
-                                              doc.text(`Time of Day: ${timeOfDayStr}`, margin + 5, yPosition)
-                                              yPosition += 5
-                                              
-                                              const description = locationProfiles[location.name] || 'No description'
-                                              const descLines = doc.splitTextToSize(`Description: ${description}`, 170)
-                                              doc.text(descLines, margin + 5, yPosition)
-                                              yPosition += descLines.length * 5 + 5
-                                            })
-                                            
-                                            doc.save(`${screenplayTitle.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_draft_locations.pdf`)
-                                            setShowLocationExportMenu(false)
-                                          })
-                                        }}
-                                        className="w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded-sm hover:bg-accent hover:text-accent-foreground cursor-pointer"
-                                      >
-                                        <FileDown className="h-3.5 w-3.5" />
-                                        PDF Document (.pdf)
-                                      </button>
-                                    </div>
-                                  </div>
-                                </>
-                              )}
-                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              title="Export Locations"
+                              className="h-5 px-1 text-[10px] gap-0.5"
+                              onClick={() => setShowLocationExportDialog(true)}
+                            >
+                              <FileDown className="h-2.5 w-2.5" />
+                              Export
+                            </Button>
                           </div>
                         </Card>
                       )}
@@ -2472,8 +2832,8 @@ ${''.padStart(40)}${authorName}
                                     className="min-h-[100px] w-full"
                                   />
                                 </div>
-                                <div>
-                                  <label className="text-sm font-semibold mb-2 block text-muted-foreground">
+                                <div className="flex items-center gap-2">
+                                  <label className="text-sm font-semibold text-muted-foreground whitespace-nowrap">
                                     Scene Numbers:
                                   </label>
                                   <div className="flex flex-wrap gap-1.5">
@@ -2483,6 +2843,22 @@ ${''.padStart(40)}${authorName}
                                       </Badge>
                                     ))}
                                   </div>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <label className="text-sm font-semibold text-muted-foreground whitespace-nowrap">
+                                    Characters:
+                                  </label>
+                                  {location.characters.length > 0 ? (
+                                    <div className="flex flex-wrap gap-1.5">
+                                      {location.characters.map((character, idx) => (
+                                        <Badge key={idx} variant="secondary" className="text-xs px-2 py-0.5">
+                                          {character}
+                                        </Badge>
+                                      ))}
+                                    </div>
+                                  ) : (
+                                    <p className="text-xs text-muted-foreground italic">No characters yet</p>
+                                  )}
                                 </div>
                               </div>
                             </AccordionContent>
@@ -3188,6 +3564,205 @@ ${''.padStart(40)}${authorName}
             </Button>
             <Button variant="destructive" onClick={handleDeleteConfirm}>
               Delete Scene
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Export Dialog */}
+      <Dialog open={showExportDialog} onOpenChange={setShowExportDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Export Screenplay</DialogTitle>
+            <DialogDescription>
+              Choose a file format and what to include in your export.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <label htmlFor="export-format" className="text-sm font-medium">
+                File Format
+              </label>
+              <Select value={exportFormat} onValueChange={(value: 'txt' | 'pdf' | 'fdx') => setExportFormat(value)}>
+                <SelectTrigger id="export-format">
+                  <SelectValue placeholder="Select format" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="txt">Text File (.txt)</SelectItem>
+                  <SelectItem value="pdf">PDF Document (.pdf)</SelectItem>
+                  <SelectItem value="fdx" disabled>Final Draft (.fdx) - Coming Soon</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="space-y-3">
+              <label className="text-sm font-medium">
+                Include in Export
+              </label>
+              
+              <div className="flex items-center space-x-2">
+                <Checkbox 
+                  id="export-scene-titles" 
+                  checked={exportOptions.sceneTitles}
+                  disabled
+                />
+                <label
+                  htmlFor="export-scene-titles"
+                  className="text-sm font-normal leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                >
+                  Scene Titles (required)
+                </label>
+              </div>
+              
+              <div className="flex items-center space-x-2">
+                <Checkbox 
+                  id="export-scene-synopsis" 
+                  checked={exportOptions.sceneSynopsis}
+                  onCheckedChange={(checked) => 
+                    setExportOptions(prev => ({ ...prev, sceneSynopsis: checked as boolean }))
+                  }
+                />
+                <label
+                  htmlFor="export-scene-synopsis"
+                  className="text-sm font-normal leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                >
+                  Scene Synopsis
+                </label>
+              </div>
+              
+              <div className="flex items-center space-x-2">
+                <Checkbox 
+                  id="export-scene-content" 
+                  checked={exportOptions.sceneContent}
+                  onCheckedChange={(checked) => 
+                    setExportOptions(prev => ({ ...prev, sceneContent: checked as boolean }))
+                  }
+                />
+                <label
+                  htmlFor="export-scene-content"
+                  className="text-sm font-normal leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                >
+                  Scene Content (dialogue, action, etc.)
+                </label>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowExportDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleExport}>
+              <Download className="h-4 w-4 mr-2" />
+              Export
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Location Export Dialog */}
+      <Dialog open={showLocationExportDialog} onOpenChange={setShowLocationExportDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Export Locations</DialogTitle>
+            <DialogDescription>
+              Choose a file format and what to include in your export.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <label htmlFor="location-export-format" className="text-sm font-medium">
+                File Format
+              </label>
+              <Select value={locationExportFormat} onValueChange={(value: 'json' | 'txt' | 'csv' | 'pdf') => setLocationExportFormat(value)}>
+                <SelectTrigger id="location-export-format">
+                  <SelectValue placeholder="Select format" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="json">JSON File (.json)</SelectItem>
+                  <SelectItem value="txt">Text File (.txt)</SelectItem>
+                  <SelectItem value="csv">CSV File (.csv)</SelectItem>
+                  <SelectItem value="pdf">PDF Document (.pdf)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="space-y-3">
+              <label className="text-sm font-medium">
+                Include in Export
+              </label>
+              
+              <div className="flex items-center space-x-2">
+                <Checkbox 
+                  id="export-location-description" 
+                  checked={locationExportOptions.locationDescription}
+                  onCheckedChange={(checked) => 
+                    setLocationExportOptions(prev => ({ ...prev, locationDescription: checked as boolean }))
+                  }
+                />
+                <label
+                  htmlFor="export-location-description"
+                  className="text-sm font-normal leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                >
+                  Location Description
+                </label>
+              </div>
+              
+              <div className="flex items-center space-x-2">
+                <Checkbox 
+                  id="export-scene-list" 
+                  checked={locationExportOptions.sceneList}
+                  onCheckedChange={(checked) => 
+                    setLocationExportOptions(prev => ({ ...prev, sceneList: checked as boolean }))
+                  }
+                />
+                <label
+                  htmlFor="export-scene-list"
+                  className="text-sm font-normal leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                >
+                  Scene List
+                </label>
+              </div>
+              
+              <div className="flex items-center space-x-2">
+                <Checkbox 
+                  id="export-character-list" 
+                  checked={locationExportOptions.characterList}
+                  onCheckedChange={(checked) => 
+                    setLocationExportOptions(prev => ({ ...prev, characterList: checked as boolean }))
+                  }
+                />
+                <label
+                  htmlFor="export-character-list"
+                  className="text-sm font-normal leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                >
+                  Character List
+                </label>
+              </div>
+              
+              <div className="flex items-center space-x-2">
+                <Checkbox 
+                  id="export-complete-scenes" 
+                  checked={locationExportOptions.completeScenes}
+                  onCheckedChange={(checked) => 
+                    setLocationExportOptions(prev => ({ ...prev, completeScenes: checked as boolean }))
+                  }
+                />
+                <label
+                  htmlFor="export-complete-scenes"
+                  className="text-sm font-normal leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                >
+                  Complete Scenes (Time of Day breakdown)
+                </label>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowLocationExportDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleLocationExport}>
+              <Download className="h-4 w-4 mr-2" />
+              Export
             </Button>
           </DialogFooter>
         </DialogContent>
