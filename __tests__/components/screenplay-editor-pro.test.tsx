@@ -1460,24 +1460,20 @@ describe('ScreenplayEditorPro Component', () => {
       expect(exportButtons.length).toBeGreaterThan(0)
     })
 
-    it('export button has dropdown icon', () => {
-      render(<ScreenplayEditorPro title="Test Screenplay" />)
-      
-      const chevronIcons = screen.queryAllByTestId('chevron-down-icon')
-      expect(chevronIcons.length).toBeGreaterThan(0)
-    })
-
-    it('opens export menu on click', async () => {
+    it('export button opens dialog instead of dropdown', async () => {
       const user = userEvent.setup()
       render(<ScreenplayEditorPro title="Test Screenplay" />)
       
       const exportButtons = screen.queryAllByText('Export')
-      if (exportButtons.length > 0) {
-        await user.click(exportButtons[0])
-        
-        // Menu should open (implementation dependent)
-        expect(exportButtons[0]).toBeInTheDocument()
-      }
+      expect(exportButtons.length).toBeGreaterThan(0)
+      
+      // Click export button
+      await user.click(exportButtons[0])
+      
+      // Dialog should open
+      await waitFor(() => {
+        expect(screen.getByText('Export Screenplay')).toBeInTheDocument()
+      })
     })
   })
 
@@ -3222,7 +3218,7 @@ describe('ScreenplayEditorPro Component', () => {
   })
 
   describe('Export Format Selection', () => {
-    it('screenplay export dialog has default format as txt', async () => {
+    it('screenplay export dialog displays file format selector', async () => {
       const user = userEvent.setup()
       render(<ScreenplayEditorPro title="Test Screenplay" />)
       
@@ -3235,15 +3231,15 @@ describe('ScreenplayEditorPro Component', () => {
       })
     })
 
-    it('location export dialog has default format as json', async () => {
+    it('location page accessible via navigation', async () => {
       const user = userEvent.setup()
       render(<ScreenplayEditorPro title="Test Screenplay" />)
       
-      const locationsButton = screen.getByText('Locations')
+      const locationsButton = screen.getByRole('button', { name: /Locations/i })
       await user.click(locationsButton)
       
       await waitFor(() => {
-        expect(screen.getByText('Locations')).toBeInTheDocument()
+        expect(screen.getByRole('heading', { name: 'Locations' })).toBeInTheDocument()
       })
     })
   })
