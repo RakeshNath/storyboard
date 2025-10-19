@@ -12,9 +12,11 @@ import { StoryboardsContent } from "./sections/storyboards-content"
 import { PlaygroundContent } from "./sections/playground-content"
 import Image from "next/image"
 import { useState, useEffect } from "react"
-import { getUserTheme } from "@/lib/auth"
+import { usePathname } from "next/navigation"
+import { getUserTheme, updateUserTheme } from "@/lib/auth"
 import { clearAppStorage } from "@/lib/storage"
 import { DevCachePanel } from "./dev-cache-panel"
+import { applyTheme, dispatchThemeChange } from "@/lib/theme-utils"
 
 interface NavigationItem {
   id: string
@@ -26,21 +28,43 @@ interface NavigationItem {
 interface DashboardLayoutProps {
   user: User
   navigationItems: NavigationItem[]
-  activeSection: string
+  activeSection?: string
   onSectionChange: (section: string) => void
 }
 
+
 export function DashboardLayout({ user, navigationItems, activeSection, onSectionChange }: DashboardLayoutProps) {
   const [currentTheme, setCurrentTheme] = useState<string>("minimalist")
+  const pathname = usePathname()
+  
+  // Auto-determine active section from pathname if not provided
+  const getActiveSection = () => {
+    if (activeSection) return activeSection
+    
+    const path = pathname.replace('/', '')
+    if (path === 'home' || path === '') return 'home'
+    if (path === 'profile') return 'profile'
+    if (path === 'themes') return 'themes'
+    if (path === 'storyboard' || path === 'storyboards') return 'storyboards'
+    if (path === 'playground') return 'playground'
+    
+    return 'home' // default
+  }
+  
+  const currentActiveSection = getActiveSection()
+
 
   useEffect(() => {
-    // Get the current theme
+    // Get the current theme and apply it
     const theme = getUserTheme()
     setCurrentTheme(theme)
+    applyTheme(theme)
 
     // Listen for theme changes
     const handleThemeChange = (event: CustomEvent) => {
-      setCurrentTheme(event.detail.theme)
+      const newTheme = event.detail.theme
+      setCurrentTheme(newTheme)
+      // Note: applyTheme is already called by the theme change dispatcher
     }
 
     window.addEventListener('themeChanged', handleThemeChange as EventListener)
@@ -86,7 +110,7 @@ export function DashboardLayout({ user, navigationItems, activeSection, onSectio
   }
 
   const renderContent = () => {
-    switch (activeSection) {
+    switch (currentActiveSection) {
       case "home":
         return <HomeContent user={user} />
       case "profile":
@@ -103,7 +127,7 @@ export function DashboardLayout({ user, navigationItems, activeSection, onSectio
   }
 
   const getPageTitle = () => {
-    switch (activeSection) {
+    switch (currentActiveSection) {
       case "home":
         return "Dashboard"
       case "profile":
@@ -157,7 +181,7 @@ export function DashboardLayout({ user, navigationItems, activeSection, onSectio
             <ul className="space-y-2">
               {navigationItems.map((item) => {
                 const Icon = item.icon
-                const isActive = activeSection === item.id
+                const isActive = currentActiveSection === item.id
 
                 return (
                   <li key={item.id}>
@@ -188,11 +212,11 @@ export function DashboardLayout({ user, navigationItems, activeSection, onSectio
               <div>
                 <h2 className="text-2xl font-bold text-card-foreground">{getPageTitle()}</h2>
                 <p className="text-sm text-muted-foreground mt-1">
-                  {activeSection === "home" && "Overview of your storyboard writing progress"}
-                  {activeSection === "profile" && "Manage your account settings and preferences"}
-                  {activeSection === "themes" && "Customize your writing environment"}
-                  {activeSection === "storyboards" && "Manage your storyboard projects"}
-                  {activeSection === "playground" && "Your experimental space for testing new features and ideas"}
+                  {currentActiveSection === "home" && "Overview of your storyboard writing progress"}
+                  {currentActiveSection === "profile" && "Manage your account settings and preferences"}
+                  {currentActiveSection === "themes" && "Customize your writing environment"}
+                  {currentActiveSection === "storyboards" && "Manage your storyboard projects"}
+                  {currentActiveSection === "playground" && "Your experimental space for testing new features and ideas"}
                 </p>
               </div>
               <div className="flex items-center gap-4">

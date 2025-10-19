@@ -9,10 +9,26 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { useState, useCallback } from "react"
+import { useRouter } from "next/navigation"
 import { Plus, FileText, Calendar, Clock, Trash2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { ScreenplayEditor } from "./screenplay-editor"
 import { SynopsisEditor } from "./synopsis-editor"
+import { getStoryboardBorderColor } from "@/lib/theme-utils"
+import { getUserTheme } from "@/lib/auth"
+
+// Generate a unique ID for storyboards
+const generateUniqueId = (): string => {
+  // Use crypto.randomUUID if available, otherwise fallback to custom implementation
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID()
+  }
+  
+  // Fallback: timestamp + random string
+  const timestamp = Date.now().toString(36)
+  const randomStr = Math.random().toString(36).substring(2, 15)
+  return `${timestamp}-${randomStr}`
+}
 
 interface Storyboard {
   id: string
@@ -29,7 +45,7 @@ interface Storyboard {
 
 const mockStoryboards: Storyboard[] = [
   {
-    id: "1",
+    id: "550e8400-e29b-41d4-a716-446655440001",
     title: "The Last Stand",
     type: "screenplay",
     status: "in-progress",
@@ -41,7 +57,7 @@ const mockStoryboards: Storyboard[] = [
     genre: "Action/Drama",
   },
   {
-    id: "2",
+    id: "550e8400-e29b-41d4-a716-446655440002",
     title: "Midnight Express",
     type: "screenplay",
     status: "draft",
@@ -53,7 +69,7 @@ const mockStoryboards: Storyboard[] = [
     genre: "Thriller/Noir",
   },
   {
-    id: "3",
+    id: "550e8400-e29b-41d4-a716-446655440003",
     title: "Ocean's Edge",
     type: "synopsis",
     status: "completed",
@@ -63,7 +79,7 @@ const mockStoryboards: Storyboard[] = [
     genre: "Drama/Romance",
   },
   {
-    id: "4",
+    id: "550e8400-e29b-41d4-a716-446655440004",
     title: "Digital Dreams",
     type: "synopsis",
     status: "draft",
@@ -110,6 +126,7 @@ interface StoryboardCardProps {
   onTypeChange: (value: "screenplay" | "synopsis") => void
   onScreenplayClick: (id: string) => void
   onSynopsisClick: (id: string) => void
+  borderColorClass: string
 }
 
 const StoryboardCard = ({ 
@@ -126,28 +143,29 @@ const StoryboardCard = ({
   onNameChange,
   onTypeChange,
   onScreenplayClick,
-  onSynopsisClick
+  onSynopsisClick,
+  borderColorClass
 }: StoryboardCardProps) => {
   if (!storyboard) {
     // Add New card
     return (
-      <Card className="h-64 border-2 border-dashed border-muted-foreground/25 hover:border-primary/50 hover:shadow-2xl hover:shadow-primary/10 hover:backdrop-blur-sm hover:bg-card/80 transition-all duration-500 cursor-pointer group relative overflow-hidden">
-        {/* Liquid glass overlay for add new card */}
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/12 via-transparent to-accent/12 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+      <Card className={`h-64 border-2 border-dashed border-muted-foreground/25 hover:border-primary/50 hover:bg-card/90 cursor-pointer group relative overflow-hidden card-hover-float-add ${borderColorClass}`}>
+        {/* Animated background gradient */}
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/8 via-transparent to-accent/8 opacity-0 group-hover:opacity-100 transition-all duration-700 pointer-events-none" />
         
-        {/* Flowing liquid effect for add new card */}
-        <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none">
-          <div className="absolute -top-1/2 -left-1/2 w-full h-full bg-gradient-to-br from-primary/15 via-accent/8 to-transparent rounded-full blur-xl animate-pulse" 
-               style={{ animation: 'liquid-flow 3s ease-in-out infinite' }} />
-          <div className="absolute -bottom-1/2 -right-1/2 w-full h-full bg-gradient-to-tl from-accent/15 via-primary/8 to-transparent rounded-full blur-xl animate-pulse" 
-               style={{ animation: 'liquid-flow 3s ease-in-out infinite 1.5s' }} />
+        {/* Floating particles effect */}
+        <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none">
+          <div className="absolute top-4 left-4 w-2 h-2 bg-primary/60 rounded-full" style={{ animation: 'particle-bounce 2s ease-in-out infinite', animationDelay: '0s' }} />
+          <div className="absolute top-8 right-6 w-1.5 h-1.5 bg-accent/60 rounded-full" style={{ animation: 'particle-bounce 2.5s ease-in-out infinite', animationDelay: '0.5s' }} />
+          <div className="absolute bottom-6 left-8 w-1 h-1 bg-primary/40 rounded-full" style={{ animation: 'particle-bounce 3s ease-in-out infinite', animationDelay: '1s' }} />
+          <div className="absolute bottom-4 right-4 w-2.5 h-2.5 bg-accent/50 rounded-full" style={{ animation: 'particle-bounce 2.2s ease-in-out infinite', animationDelay: '1.5s' }} />
         </div>
         
-        {/* Glassy border effect for add new card */}
-        <div className="absolute inset-0 ring-1 ring-primary/0 group-hover:ring-primary/30 transition-all duration-500 rounded-lg" />
+        {/* Glowing border effect */}
+        <div className="absolute inset-0 ring-2 ring-primary/0 group-hover:ring-primary/40 transition-all duration-500 rounded-lg shadow-[0_0_0_1px_rgba(255,255,255,0.1)] group-hover:shadow-[0_0_0_1px_rgba(255,255,255,0.2)]" />
         
-        {/* Reflective shine effect for add new card */}
-        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/8 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none transform -skew-x-12 translate-x-full group-hover:translate-x-[-200%] transition-transform duration-1000" />
+        {/* Shimmer effect */}
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent opacity-0 group-hover:opacity-100 pointer-events-none" style={{ animation: 'shimmer 1s ease-out infinite' }} />
         
         <CardContent className="h-full flex flex-col items-center justify-center p-6 relative z-10">
           <Dialog open={onCreateDialogOpen} onOpenChange={onCreateDialogChange}>
@@ -155,10 +173,10 @@ const StoryboardCard = ({
               <Button
                 variant="ghost"
                 size="lg"
-                className="h-full w-full flex flex-col gap-4 text-muted-foreground group-hover:text-primary transition-colors"
+                className="h-full w-full flex flex-col gap-4 text-muted-foreground group-hover:text-primary transition-all duration-300 ease-out"
               >
-                <div className="p-4 rounded-full bg-muted group-hover:bg-primary/10 transition-colors">
-                  <Plus className="h-8 w-8" />
+                <div className="p-4 rounded-full bg-muted group-hover:bg-primary/10 group-hover:scale-110 group-hover:shadow-lg group-hover:shadow-primary/20 transition-all duration-300 ease-out">
+                  <Plus className="h-8 w-8 group-hover:rotate-90 transition-transform duration-300 ease-out" />
                 </div>
                 <div className="text-center">
                   <p className="font-semibold">Add New</p>
@@ -237,40 +255,44 @@ const StoryboardCard = ({
   return (
     <Card 
       className={cn(
-        "h-64 hover:shadow-2xl hover:shadow-primary/10 hover:backdrop-blur-sm hover:bg-card/80 hover:border-primary/20 transition-all duration-500 group relative overflow-hidden",
+        "h-64 hover:bg-card/90 hover:border-primary/30 group relative overflow-hidden card-hover-float",
+        borderColorClass,
         storyboard.type === "screenplay" ? "cursor-pointer" : "cursor-default"
       )}
       onClick={handleCardClick}
     >
-      {/* Liquid glass overlay with flowing animation */}
-      <div className="absolute inset-0 bg-gradient-to-br from-primary/8 via-transparent to-accent/8 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+      {/* Dynamic background gradient */}
+      <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-accent/10 opacity-0 group-hover:opacity-100 transition-all duration-700 pointer-events-none" />
       
-      {/* Flowing liquid effect */}
-      <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none">
-        <div className="absolute -top-1/2 -left-1/2 w-full h-full bg-gradient-to-br from-primary/10 via-accent/5 to-transparent rounded-full blur-xl animate-pulse" 
-             style={{ animation: 'liquid-flow 3s ease-in-out infinite' }} />
-        <div className="absolute -bottom-1/2 -right-1/2 w-full h-full bg-gradient-to-tl from-accent/10 via-primary/5 to-transparent rounded-full blur-xl animate-pulse" 
-             style={{ animation: 'liquid-flow 3s ease-in-out infinite 1.5s' }} />
+      {/* Floating orbs effect */}
+      <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none">
+        <div className="absolute top-6 left-6 w-3 h-3 bg-primary/50 rounded-full blur-sm" style={{ animation: 'orb-pulse 3s ease-in-out infinite', animationDelay: '0s' }} />
+        <div className="absolute top-12 right-8 w-2 h-2 bg-accent/60 rounded-full blur-sm" style={{ animation: 'orb-pulse 4s ease-in-out infinite', animationDelay: '1s' }} />
+        <div className="absolute bottom-8 left-10 w-2.5 h-2.5 bg-primary/40 rounded-full blur-sm" style={{ animation: 'orb-pulse 3.5s ease-in-out infinite', animationDelay: '2s' }} />
+        <div className="absolute bottom-6 right-6 w-1.5 h-1.5 bg-accent/50 rounded-full blur-sm" style={{ animation: 'orb-pulse 2.5s ease-in-out infinite', animationDelay: '0.5s' }} />
       </div>
       
-      {/* Glassy border effect */}
-      <div className="absolute inset-0 ring-1 ring-primary/0 group-hover:ring-primary/30 transition-all duration-500 rounded-lg" />
+      {/* Enhanced glowing border */}
+      <div className="absolute inset-0 ring-2 ring-primary/0 group-hover:ring-primary/50 transition-all duration-500 rounded-lg shadow-[0_0_0_1px_rgba(255,255,255,0.15)] group-hover:shadow-[0_0_0_1px_rgba(255,255,255,0.25)]" />
       
-      {/* Reflective shine effect */}
-      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none transform -skew-x-12 translate-x-full group-hover:translate-x-[-200%] transition-transform duration-1000" />
+      {/* Enhanced shimmer sweep */}
+      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/15 to-transparent opacity-0 group-hover:opacity-100 pointer-events-none" style={{ animation: 'shimmer 1.2s ease-out infinite' }} />
+      
+      {/* Subtle inner glow */}
+      <div className="absolute inset-2 rounded-lg bg-gradient-to-br from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
       
       <CardHeader className="relative z-10">
         <div className="flex items-start justify-between">
           <div className="flex-1 min-w-0">
             {/* Title */}
-            <CardTitle className="text-lg truncate group-hover:text-primary transition-colors">
+            <CardTitle className="text-lg truncate group-hover:text-primary group-hover:scale-105 transition-all duration-300 ease-out">
               {storyboard.title}
             </CardTitle>
             
             {/* Type in capital letters - Parallelogram Design */}
             <div className="mt-2">
               <div 
-                className="relative cursor-pointer hover:scale-110 hover:shadow-lg transition-all duration-300 inline-block"
+                className="relative cursor-pointer group-hover:scale-110 group-hover:shadow-lg group-hover:shadow-primary/20 transition-all duration-300 ease-out inline-block"
                 style={{
                   background: getTypeColors(storyboard.type).background,
                   color: getTypeColors(storyboard.type).color,
@@ -299,7 +321,7 @@ const StoryboardCard = ({
               <Button 
                 variant="ghost" 
                 size="sm" 
-                className="opacity-70 group-hover:opacity-100 transition-opacity hover:bg-destructive/10 hover:text-destructive"
+                className="opacity-70 group-hover:opacity-100 group-hover:scale-110 group-hover:bg-destructive/10 group-hover:text-destructive transition-all duration-300 ease-out embossed-button"
                 onClick={(e) => e.stopPropagation()}
               >
                 <Trash2 className="h-4 w-4" />
@@ -335,9 +357,9 @@ const StoryboardCard = ({
         {storyboard.type === "screenplay" ? (
           <div className="flex gap-2 justify-center">
               {/* Scene Block */}
-              <div className="flex flex-col items-center space-y-1">
+              <div className="flex flex-col items-center space-y-1 group-hover:scale-110 transition-all duration-300 ease-out">
                 <div 
-                  className="w-12 h-12 rounded-md p-1 text-center flex items-center justify-center relative overflow-hidden"
+                  className="w-12 h-12 rounded-md p-1 text-center flex items-center justify-center relative overflow-hidden embossed-block transition-all duration-300 ease-out"
                   style={{ 
                     background: 'var(--accent)',
                     border: '1px solid var(--accent)',
@@ -358,9 +380,9 @@ const StoryboardCard = ({
               </div>
               
               {/* Subscene Block */}
-              <div className="flex flex-col items-center space-y-1">
+              <div className="flex flex-col items-center space-y-1 group-hover:scale-110 transition-all duration-300 ease-out">
                 <div 
-                  className="w-12 h-12 rounded-md p-1 text-center flex items-center justify-center relative overflow-hidden"
+                  className="w-12 h-12 rounded-md p-1 text-center flex items-center justify-center relative overflow-hidden embossed-block transition-all duration-300 ease-out"
                   style={{ 
                     background: 'var(--accent)',
                     border: '1px solid var(--accent)',
@@ -383,9 +405,9 @@ const StoryboardCard = ({
         ) : (
           <div className="flex gap-2 justify-center">
               {/* Pages Block */}
-              <div className="flex flex-col items-center space-y-1">
+              <div className="flex flex-col items-center space-y-1 group-hover:scale-110 transition-all duration-300 ease-out">
                 <div 
-                  className="w-12 h-12 rounded-md p-1 text-center flex items-center justify-center relative overflow-hidden"
+                  className="w-12 h-12 rounded-md p-1 text-center flex items-center justify-center relative overflow-hidden embossed-block transition-all duration-300 ease-out"
                   style={{ 
                     background: 'var(--accent)',
                     border: '1px solid var(--accent)',
@@ -432,12 +454,17 @@ const StoryboardCard = ({
 
 
 export function StoryboardsContent() {
+  const router = useRouter()
   const [storyboards, setStoryboards] = useState<Storyboard[]>(mockStoryboards)
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [newStoryboardName, setNewStoryboardName] = useState("")
   const [newStoryboardType, setNewStoryboardType] = useState<"screenplay" | "synopsis">("screenplay")
   const [editingScreenplayId, setEditingScreenplayId] = useState<string | null>(null)
   const [editingSynopsisId, setEditingSynopsisId] = useState<string | null>(null)
+  
+  // Get current theme for border styling
+  const currentTheme = getUserTheme()
+  const borderColorClass = getStoryboardBorderColor(currentTheme)
 
 
 
@@ -453,8 +480,9 @@ export function StoryboardsContent() {
   const handleCreateStoryboard = useCallback(() => {
     if (!newStoryboardName.trim()) return
 
+    const uniqueId = generateUniqueId()
     const newStoryboard: Storyboard = {
-      id: Date.now().toString(),
+      id: uniqueId,
       title: newStoryboardName.trim(),
       type: newStoryboardType,
       status: "draft",
@@ -470,7 +498,12 @@ export function StoryboardsContent() {
     setNewStoryboardName("")
     setNewStoryboardType("screenplay")
     setIsCreateDialogOpen(false)
-  }, [newStoryboardName, newStoryboardType, storyboards])
+    
+    // Auto-navigate to the new screenplay if it's a screenplay
+    if (newStoryboardType === "screenplay") {
+      router.push(`/storyboard/${uniqueId}`)
+    }
+  }, [newStoryboardName, newStoryboardType, storyboards, router])
 
   const handleDialogClose = useCallback(() => {
     setIsCreateDialogOpen(false)
@@ -491,8 +524,8 @@ export function StoryboardsContent() {
   }, [])
 
   const handleScreenplayClick = useCallback((id: string) => {
-    setEditingScreenplayId(id)
-  }, [])
+    router.push(`/storyboard/${id}`)
+  }, [router])
 
   const handleSynopsisClick = useCallback((id: string) => {
     setEditingSynopsisId(id)
@@ -504,36 +537,19 @@ export function StoryboardsContent() {
   }, [])
 
 
-  // Arrange cards in rows of 4
+  // Arrange cards in rows of 5
   const arrangeInRows = () => {
     const allItems = [null, ...storyboards] // null represents the "Add New" card
     const rows = []
 
-    for (let i = 0; i < allItems.length; i += 4) {
-      rows.push(allItems.slice(i, i + 4))
+    for (let i = 0; i < allItems.length; i += 5) {
+      rows.push(allItems.slice(i, i + 5))
     }
 
     return rows
   }
 
-  // Show screenplay editor if editing
-  if (editingScreenplayId) {
-    const screenplay = storyboards.find(s => s.id === editingScreenplayId)
-    return (
-      <ScreenplayEditor 
-        screenplayId={editingScreenplayId} 
-        onBack={handleBackFromEditor}
-        initialTitle={screenplay?.title}
-        onTitleChange={(newTitle) => {
-          setStoryboards(prev => prev.map(s => 
-            s.id === editingScreenplayId ? { ...s, title: newTitle } : s
-          ))
-        }}
-      />
-    )
-  }
-
-  // Show synopsis editor if editing
+  // Show synopsis editor if editing (keeping synopsis editor for now)
   if (editingSynopsisId) {
     const synopsis = storyboards.find(s => s.id === editingSynopsisId)
     return <SynopsisEditor synopsisId={editingSynopsisId} synopsisTitle={synopsis?.title || "Synopsis"} onBack={handleBackFromEditor} />
@@ -541,14 +557,10 @@ export function StoryboardsContent() {
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold">Storyboards</h1>
-        <p className="text-muted-foreground mt-2">Manage your storyboard projects and track your writing progress.</p>
-      </div>
 
       <div className="space-y-6">
         {arrangeInRows().map((row, rowIndex) => (
-          <div key={rowIndex} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div key={rowIndex} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
             {row.map((storyboard, cardIndex) => (
               <StoryboardCard 
                 key={storyboard?.id || `add-new-${rowIndex}-${cardIndex}`} 
@@ -566,6 +578,7 @@ export function StoryboardsContent() {
                 onTypeChange={handleTypeChange}
                 onScreenplayClick={handleScreenplayClick}
                 onSynopsisClick={handleSynopsisClick}
+                borderColorClass={borderColorClass}
               />
             ))}
           </div>

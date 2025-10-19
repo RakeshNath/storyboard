@@ -141,10 +141,6 @@ export function ProfileContent({ user }: ProfileContentProps) {
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold">Profile Information</h1>
-        <p className="text-muted-foreground mt-2">Manage your account settings and preferences.</p>
-      </div>
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">

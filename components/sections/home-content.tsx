@@ -98,12 +98,6 @@ export function HomeContent({ user }: HomeContentProps) {
 
   return (
     <div className="space-y-8" role="main">
-      <div>
-        <h1 className="text-3xl font-bold text-balance">Welcome, {user.name}</h1>
-        <p className="text-muted-foreground mt-2 text-pretty">
-          Ready to craft your next masterpiece? Your creative workspace awaits.
-        </p>
-      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <Card role="article">

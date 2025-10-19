@@ -1,13 +1,7 @@
 import React from 'react'
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { ThemesContent } from '@/components/sections/themes-content'
-
-// Mock the auth module
-jest.mock('@/lib/auth', () => ({
-  getUserTheme: jest.fn(() => 'minimalist'),
-  updateUserTheme: jest.fn(),
-}))
+import { themes } from '@/lib/theme-utils'
 
 // Mock Next.js Image component
 jest.mock('next/image', () => {
@@ -16,433 +10,374 @@ jest.mock('next/image', () => {
   }
 })
 
-// Mock window.dispatchEvent
-const mockDispatchEvent = jest.fn()
-Object.defineProperty(window, 'dispatchEvent', {
-  value: mockDispatchEvent,
-  writable: true,
-})
+// Mock theme utilities
+jest.mock('@/lib/theme-utils', () => ({
+  themes: [
+    {
+      id: 'test-theme',
+      name: 'Test Theme',
+      description: 'A test theme for testing',
+      colors: {
+        primary: 'oklch(0.45 0.15 264)',
+        primaryForeground: 'oklch(0.98 0.005 264)',
+        secondary: 'oklch(0.15 0.02 264)',
+        secondaryForeground: 'oklch(0.98 0.005 264)',
+        background: 'oklch(1 0 0)',
+        foreground: 'oklch(0.145 0 0)',
+        card: 'oklch(1 0 0)',
+        cardForeground: 'oklch(0.145 0 0)',
+        popover: 'oklch(1 0 0)',
+        popoverForeground: 'oklch(0.145 0 0)',
+        muted: 'oklch(0.97 0 0)',
+        mutedForeground: 'oklch(0.556 0 0)',
+        accent: 'oklch(0.97 0 0)',
+        accentForeground: 'oklch(0.145 0 0)',
+        destructive: 'oklch(0.577 0.245 27.325)',
+        destructiveForeground: 'oklch(0.577 0.245 27.325)',
+        border: 'oklch(0.922 0 0)',
+        input: 'oklch(0.922 0 0)',
+        ring: 'oklch(0.708 0 0)',
+        sidebar: 'oklch(0.985 0 0)',
+        sidebarForeground: 'oklch(0.145 0 0)',
+        sidebarPrimary: 'oklch(0.145 0 0)',
+        sidebarPrimaryForeground: 'oklch(0.985 0 0)',
+        sidebarAccent: 'oklch(0.97 0 0)',
+        sidebarAccentForeground: 'oklch(0.145 0 0)',
+        sidebarBorder: 'oklch(0.922 0 0)',
+        sidebarRing: 'oklch(0.708 0 0)'
+      },
+      textStyle: {
+        heading: 'font-bold text-xl',
+        body: 'text-base leading-relaxed'
+      }
+    }
+  ],
+  applyTheme: jest.fn(),
+  dispatchThemeChange: jest.fn()
+}))
 
-// Mock document.documentElement.style.setProperty
-const mockSetProperty = jest.fn()
-Object.defineProperty(document, 'documentElement', {
-  value: {
-    style: {
-      setProperty: mockSetProperty,
-    },
-  },
-  writable: true,
-})
+// Mock auth utilities
+jest.mock('@/lib/auth', () => ({
+  getUserTheme: jest.fn(() => 'test-theme'),
+  updateUserTheme: jest.fn()
+}))
 
-describe('ThemesContent Component', () => {
-  const user = userEvent.setup()
-
+describe('ThemesContent', () => {
   beforeEach(() => {
     jest.clearAllMocks()
-    mockDispatchEvent.mockClear()
-    mockSetProperty.mockClear()
   })
 
-  describe('Rendering', () => {
-    it('renders themes section with title and description', () => {
+  describe('Layout and Structure', () => {
+    it('renders all theme tiles in a grid layout', () => {
       render(<ThemesContent />)
       
-      expect(screen.getByText('Themes')).toBeInTheDocument()
-      expect(screen.getByText(/Customize your writing environment/)).toBeInTheDocument()
+      // Check if grid container exists
+      const gridContainer = screen.getByRole('main', { hidden: true })
+      expect(gridContainer).toBeInTheDocument()
+      
+      // Check if theme tiles are rendered
+      const themeCards = screen.getAllByRole('article')
+      expect(themeCards).toHaveLength(themes.length)
     })
 
-    it('renders all theme cards', () => {
+    it('applies correct grid classes for responsive layout', () => {
       render(<ThemesContent />)
       
-      // Check for all theme names
-      expect(screen.getByText('Professional')).toBeInTheDocument()
-      expect(screen.getByText('Classic')).toBeInTheDocument()
-      expect(screen.getByText('Film Noir')).toBeInTheDocument()
-      expect(screen.getByText('Indie Spirit')).toBeInTheDocument()
-      expect(screen.getByText('Minimalist')).toBeInTheDocument()
-      expect(screen.getByText('Cyberpunk')).toBeInTheDocument()
+      const gridContainer = screen.getByRole('main', { hidden: true })
+      expect(gridContainer).toHaveClass('grid', 'grid-cols-1', 'md:grid-cols-2', 'lg:grid-cols-2', 'xl:grid-cols-3', 'gap-8')
     })
 
-    it('renders theme descriptions', () => {
+    it('maintains consistent spacing between theme tiles', () => {
       render(<ThemesContent />)
       
-      // Note: The descriptions are not rendered in the current component structure
-      // They are only defined in the theme objects but not displayed in the UI
-      // This test verifies the component renders without errors
-      expect(screen.getByText('Themes')).toBeInTheDocument()
-    })
-
-    it('renders theme customization info card', () => {
-      render(<ThemesContent />)
-      
-      expect(screen.getByText('Theme Customization')).toBeInTheDocument()
-      expect(screen.getByText(/Each theme includes carefully selected color palettes/)).toBeInTheDocument()
-    })
-
-    it('renders theme logos', () => {
-      render(<ThemesContent />)
-      
-      const images = screen.getAllByRole('img')
-      expect(images.length).toBeGreaterThan(0)
-      
-      // Check for specific theme logos
-      expect(screen.getByAltText('Professional Logo')).toBeInTheDocument()
-      expect(screen.getByAltText('Classic Logo')).toBeInTheDocument()
-      expect(screen.getByAltText('Film Noir Logo')).toBeInTheDocument()
-      expect(screen.getByAltText('Indie Spirit Logo')).toBeInTheDocument()
-      expect(screen.getByAltText('Minimalist Logo')).toBeInTheDocument()
-      expect(screen.getByAltText('Cyberpunk Logo')).toBeInTheDocument()
+      const gridContainer = screen.getByRole('main', { hidden: true })
+      expect(gridContainer).toHaveClass('gap-8')
     })
   })
 
-  describe('Theme Selection', () => {
-    it('shows selected theme with check mark', () => {
+  describe('Icon Sizing and Positioning', () => {
+    it('renders theme logos with correct dimensions', () => {
       render(<ThemesContent />)
       
-      // Minimalist should be selected by default (from mock)
-      const minimalistCard = screen.getByText('Minimalist').closest('[class*="card"]')
-      expect(minimalistCard).toHaveClass('ring-2')
-      
-      // Check for check mark icon (Check component from lucide-react)
-      const checkIcons = screen.getAllByRole('generic').filter(el => 
-        el.querySelector('svg') && el.className.includes('p-0.5')
-      )
-      expect(checkIcons.length).toBeGreaterThan(0)
+      const themeImages = screen.getAllByRole('img')
+      themeImages.forEach(img => {
+        expect(img).toHaveAttribute('width', '72')
+        expect(img).toHaveAttribute('height', '72')
+      })
     })
 
-    it('shows correct button text for selected and unselected themes', () => {
+    it('positions logos in centered containers', () => {
       render(<ThemesContent />)
       
-      // Selected theme should show "Applied"
-      expect(screen.getByText('Applied')).toBeInTheDocument()
+      const logoContainers = screen.getAllByTestId('theme-logo-container', { exact: false })
+      logoContainers.forEach(container => {
+        expect(container).toHaveClass('w-20', 'h-20', 'flex', 'items-center', 'justify-center')
+      })
+    })
+
+    it('applies object-contain class to images for proper scaling', () => {
+      render(<ThemesContent />)
       
-      // Other themes should show "Apply"
-      const applyButtons = screen.getAllByText('Apply')
+      const themeImages = screen.getAllByRole('img')
+      themeImages.forEach(img => {
+        expect(img).toHaveClass('w-full', 'h-full', 'object-contain')
+      })
+    })
+  })
+
+  describe('Theme Information Display', () => {
+    it('displays theme names correctly', () => {
+      render(<ThemesContent />)
+      
+      themes.forEach(theme => {
+        expect(screen.getByText(theme.name)).toBeInTheDocument()
+      })
+    })
+
+    it('displays theme descriptions correctly', () => {
+      render(<ThemesContent />)
+      
+      themes.forEach(theme => {
+        expect(screen.getByText(theme.description)).toBeInTheDocument()
+      })
+    })
+
+    it('applies theme-specific colors to text elements', () => {
+      render(<ThemesContent />)
+      
+      const themeNames = screen.getAllByText(/Test Theme|Professional|Classic|Noir|Indie|Minimalist|Cyberpunk/)
+      themeNames.forEach((name, index) => {
+        if (index < themes.length) {
+          const expectedColor = themes[index].colors.foreground
+          expect(name).toHaveStyle(`color: ${expectedColor}`)
+        }
+      })
+    })
+  })
+
+  describe('Color Palette Display', () => {
+    it('displays complete color palette for each theme', () => {
+      render(<ThemesContent />)
+      
+      // Check for color palette labels
+      const paletteLabels = screen.getAllByText('Complete Color Palette')
+      expect(paletteLabels).toHaveLength(themes.length)
+    })
+
+    it('renders 20 color swatches per theme in 10x2 grid', () => {
+      render(<ThemesContent />)
+      
+      // Each theme should have 20 color swatches
+      const colorSwatches = screen.getAllByTitle(/Primary|Secondary|Accent|Muted|Destructive|Background|Card|Popover|Input|Border|Foreground|Primary Text|Secondary Text|Muted Text|Accent Text|Sidebar|Sidebar Primary|Sidebar Accent|Sidebar Border|Ring\/Focus/)
+      expect(colorSwatches.length).toBeGreaterThanOrEqual(20 * themes.length)
+    })
+
+    it('applies correct background colors to color swatches', () => {
+      render(<ThemesContent />)
+      
+      const primaryColorSwatches = screen.getAllByTitle('Primary')
+      primaryColorSwatches.forEach((swatch, index) => {
+        if (index < themes.length) {
+          const expectedColor = themes[index].colors.primary
+          expect(swatch).toHaveStyle(`background-color: ${expectedColor}`)
+        }
+      })
+    })
+
+    it('uses 10-column grid for color palette rows', () => {
+      render(<ThemesContent />)
+      
+      const colorRows = screen.getAllByTitle('Primary')
+      colorRows.forEach(row => {
+        const parentGrid = row.closest('.grid-cols-10')
+        expect(parentGrid).toBeInTheDocument()
+      })
+    })
+
+    it('applies proper spacing between color swatches', () => {
+      render(<ThemesContent />)
+      
+      const colorRows = document.querySelectorAll('.grid-cols-10')
+      colorRows.forEach(row => {
+        expect(row).toHaveClass('gap-1')
+      })
+    })
+  })
+
+  describe('Button Text and Actions', () => {
+    it('displays correct button text for unselected themes', () => {
+      render(<ThemesContent />)
+      
+      const applyButtons = screen.getAllByText('Apply Theme')
       expect(applyButtons.length).toBeGreaterThan(0)
     })
 
-    it('applies theme when apply button is clicked', async () => {
+    it('displays correct button text for selected theme', async () => {
       render(<ThemesContent />)
       
-      const professionalApplyButton = screen.getByText('Professional').closest('[class*="card"]')?.querySelector('button')
-      expect(professionalApplyButton).toBeInTheDocument()
-      
-      await user.click(professionalApplyButton!)
-      
-      // Verify updateUserTheme was called
-      const { updateUserTheme } = require('@/lib/auth')
-      expect(updateUserTheme).toHaveBeenCalledWith('professional')
-      
-      // Verify theme was applied to document
-      expect(mockSetProperty).toHaveBeenCalledWith('--primary', expect.any(String))
-      expect(mockSetProperty).toHaveBeenCalledWith('--background', expect.any(String))
-    })
-
-    it('dispatches theme change event when theme is applied', async () => {
-      render(<ThemesContent />)
-      
-      const cyberpunkApplyButton = screen.getByText('Cyberpunk').closest('[class*="card"]')?.querySelector('button')
-      expect(cyberpunkApplyButton).toBeInTheDocument()
-      
-      await user.click(cyberpunkApplyButton!)
-      
-      // Verify custom event was dispatched
-      expect(mockDispatchEvent).toHaveBeenCalledWith(
-        expect.objectContaining({
-          type: 'themeChanged',
-          detail: { theme: 'cyberpunk' }
+      // Find and click the first theme button
+      const applyButtons = screen.getAllByText('Apply Theme')
+      if (applyButtons.length > 0) {
+        fireEvent.click(applyButtons[0])
+        
+        await waitFor(() => {
+          expect(screen.getByText('✓ Applied')).toBeInTheDocument()
         })
-      )
+      }
     })
-  })
 
-  describe('Theme Preview', () => {
-    it('shows preview ring on hover', async () => {
+    it('applies theme-specific colors to buttons', () => {
       render(<ThemesContent />)
       
-      const classicCard = screen.getByText('Classic').closest('[class*="card"]')
-      expect(classicCard).toBeInTheDocument()
-      
-      await user.hover(classicCard!)
-      
-      // Card should have preview ring
-      expect(classicCard).toHaveClass('ring-2')
+      const applyButtons = screen.getAllByText('Apply Theme')
+      applyButtons.forEach((button, index) => {
+        if (index < themes.length) {
+          const expectedBackgroundColor = themes[index].colors.muted
+          const expectedTextColor = themes[index].colors.mutedForeground
+          expect(button).toHaveStyle(`background-color: ${expectedBackgroundColor}`)
+          expect(button).toHaveStyle(`color: ${expectedTextColor}`)
+        }
+      })
     })
 
-    it('removes preview ring on mouse leave', async () => {
-      render(<ThemesContent />)
-      
-      const noirCard = screen.getByText('Film Noir').closest('[class*="card"]')
-      expect(noirCard).toBeInTheDocument()
-      
-      // Hover to show preview
-      await user.hover(noirCard!)
-      expect(noirCard).toHaveClass('ring-2')
-      
-      // Mouse leave to remove preview
-      await user.unhover(noirCard!)
-      // Note: The preview state is managed internally, so we can't easily test the removal
-      // without more complex state inspection
-    })
-
-    it('handles preview for multiple themes', async () => {
-      render(<ThemesContent />)
-      
-      const indieCard = screen.getByText('Indie Spirit').closest('[class*="card"]')
-      const minimalistCard = screen.getByText('Minimalist').closest('[class*="card"]')
-      
-      // Hover indie card
-      await user.hover(indieCard!)
-      expect(indieCard).toHaveClass('ring-2')
-      
-      // Hover minimalist card
-      await user.hover(minimalistCard!)
-      expect(minimalistCard).toHaveClass('ring-2')
-    })
-  })
-
-  describe('Theme Application', () => {
-    it('applies all CSS variables when theme is selected', async () => {
-      render(<ThemesContent />)
-      
-      const professionalButton = screen.getByText('Professional').closest('[class*="card"]')?.querySelector('button')
-      await user.click(professionalButton!)
-      
-      // Verify all major CSS variables are set
-      expect(mockSetProperty).toHaveBeenCalledWith('--primary', expect.any(String))
-      expect(mockSetProperty).toHaveBeenCalledWith('--primary-foreground', expect.any(String))
-      expect(mockSetProperty).toHaveBeenCalledWith('--secondary', expect.any(String))
-      expect(mockSetProperty).toHaveBeenCalledWith('--background', expect.any(String))
-      expect(mockSetProperty).toHaveBeenCalledWith('--foreground', expect.any(String))
-      expect(mockSetProperty).toHaveBeenCalledWith('--card', expect.any(String))
-      expect(mockSetProperty).toHaveBeenCalledWith('--border', expect.any(String))
-      expect(mockSetProperty).toHaveBeenCalledWith('--sidebar', expect.any(String))
-    })
-
-    it('handles theme not found gracefully', async () => {
-      // Mock a theme that doesn't exist
+    it('calls theme change handler when button is clicked', async () => {
       const { updateUserTheme } = require('@/lib/auth')
-      updateUserTheme.mockImplementation(() => {
-        // Simulate applying a non-existent theme
-        const root = document.documentElement
-        const theme = undefined // Simulate theme not found
-        if (!theme) return
-        // This should not execute
-        root.style.setProperty("--primary", "test")
-      })
-      
       render(<ThemesContent />)
       
-      // The component should handle missing themes gracefully
-      expect(screen.getByText('Themes')).toBeInTheDocument()
+      const applyButtons = screen.getAllByText('Apply Theme')
+      if (applyButtons.length > 0) {
+        fireEvent.click(applyButtons[0])
+        
+        await waitFor(() => {
+          expect(updateUserTheme).toHaveBeenCalledWith('test-theme')
+        })
+      }
     })
 
-    it('updates selected theme state when applied', async () => {
+    it('shows checkmark icon for selected theme', async () => {
       render(<ThemesContent />)
       
-      // Initially minimalist should be selected
-      expect(screen.getByText('Applied')).toBeInTheDocument()
-      
-      // Apply cyberpunk theme
-      const cyberpunkButton = screen.getByText('Cyberpunk').closest('[class*="card"]')?.querySelector('button')
-      await user.click(cyberpunkButton!)
-      
-      // Should now show cyberpunk as applied
-      await waitFor(() => {
-        expect(screen.getByText('Applied')).toBeInTheDocument()
-      })
+      // Click first theme to select it
+      const applyButtons = screen.getAllByText('Apply Theme')
+      if (applyButtons.length > 0) {
+        fireEvent.click(applyButtons[0])
+        
+        await waitFor(() => {
+          const checkIcons = screen.getAllByTestId('check-icon', { exact: false })
+          expect(checkIcons.length).toBeGreaterThan(0)
+        })
+      }
     })
   })
 
-  describe('Theme Styling', () => {
-    it('applies correct styling to theme cards', () => {
+  describe('Theme Card Styling', () => {
+    it('applies theme-specific background colors to cards', () => {
       render(<ThemesContent />)
       
-      const cards = screen.getAllByRole('generic').filter(el => 
-        el.className.includes('card') && el.className.includes('cursor-pointer')
-      )
-      
-      expect(cards.length).toBe(6) // Should have 6 theme cards
-      
-      cards.forEach(card => {
-        expect(card).toHaveClass('transition-all', 'duration-200', 'hover:shadow-lg')
+      const themeCards = screen.getAllByRole('article')
+      themeCards.forEach((card, index) => {
+        if (index < themes.length) {
+          const expectedBackgroundColor = themes[index].colors.card
+          expect(card).toHaveStyle(`background-color: ${expectedBackgroundColor}`)
+        }
       })
     })
 
-    it('applies theme-specific colors to cards', () => {
+    it('applies theme-specific border colors to cards', () => {
       render(<ThemesContent />)
       
-      const professionalCard = screen.getByText('Professional').closest('[class*="card"]')
-      expect(professionalCard).toHaveStyle({
-        backgroundColor: 'oklch(0.12 0.015 264)',
-        borderColor: 'oklch(0.22 0.025 264)',
-        color: 'oklch(0.92 0.01 264)'
+      const themeCards = screen.getAllByRole('article')
+      themeCards.forEach((card, index) => {
+        if (index < themes.length) {
+          const expectedBorderColor = themes[index].colors.border
+          expect(card).toHaveStyle(`border-color: ${expectedBorderColor}`)
+        }
       })
     })
 
-    it('shows color palette previews', () => {
+    it('applies hover effects to theme cards', () => {
       render(<ThemesContent />)
       
-      // Each theme card should have color palette dots
-      const colorDots = screen.getAllByTitle(/primary|secondary|background|foreground/)
-      expect(colorDots.length).toBeGreaterThan(0)
-    })
-  })
-
-  describe('Component Initialization', () => {
-    it('loads user theme on mount', () => {
-      const { getUserTheme } = require('@/lib/auth')
-      getUserTheme.mockReturnValue('cyberpunk')
-      
-      render(<ThemesContent />)
-      
-      expect(getUserTheme).toHaveBeenCalled()
-    })
-
-    it('applies user theme on mount', () => {
-      const { getUserTheme } = require('@/lib/auth')
-      getUserTheme.mockReturnValue('professional')
-      
-      render(<ThemesContent />)
-      
-      // Should apply the user's theme on mount
-      expect(mockSetProperty).toHaveBeenCalled()
-    })
-
-    it('handles missing user theme gracefully', () => {
-      const { getUserTheme } = require('@/lib/auth')
-      getUserTheme.mockReturnValue(null)
-      
-      render(<ThemesContent />)
-      
-      // Should still render without errors
-      expect(screen.getByText('Themes')).toBeInTheDocument()
-    })
-  })
-
-  describe('Helper Functions', () => {
-    it('gets correct theme logo for each theme', () => {
-      render(<ThemesContent />)
-      
-      // Check that logos are rendered with correct src attributes
-      const professionalLogo = screen.getByAltText('Professional Logo')
-      expect(professionalLogo).toHaveAttribute('src', '/logos/logo-professional.png')
-      
-      const classicLogo = screen.getByAltText('Classic Logo')
-      expect(classicLogo).toHaveAttribute('src', '/logos/logo-classic.png')
-      
-      const noirLogo = screen.getByAltText('Film Noir Logo')
-      expect(noirLogo).toHaveAttribute('src', '/logos/logo-filmnoir.png')
-    })
-
-    it('handles unknown theme logo gracefully', () => {
-      // This tests the fallback in getThemeLogo function
-      render(<ThemesContent />)
-      
-      // All logos should have valid src attributes
-      const images = screen.getAllByRole('img')
-      images.forEach(img => {
-        expect(img).toHaveAttribute('src')
-        expect(img.getAttribute('src')).toMatch(/^\/logos\/logo-.*\.png$/)
+      const themeCards = screen.getAllByRole('article')
+      themeCards.forEach(card => {
+        expect(card).toHaveClass('hover:shadow-lg', 'hover:scale-105')
       })
     })
   })
 
   describe('Accessibility', () => {
-    it('has proper ARIA labels and roles', () => {
+    it('provides proper alt text for theme logos', () => {
       render(<ThemesContent />)
       
-      // Check for proper heading structure
-      expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Themes')
-      
-      // Check for proper button roles
-      const buttons = screen.getAllByRole('button')
-      expect(buttons.length).toBeGreaterThan(0)
-      
-      // Check for proper image alt text
-      const images = screen.getAllByRole('img')
-      images.forEach(img => {
-        expect(img).toHaveAttribute('alt')
-        expect(img.getAttribute('alt')).toMatch(/Logo$/)
+      const themeImages = screen.getAllByRole('img')
+      themeImages.forEach((img, index) => {
+        if (index < themes.length) {
+          expect(img).toHaveAttribute('alt', `${themes[index].name} logo`)
+        }
       })
     })
 
-    it('supports keyboard navigation', async () => {
+    it('provides proper title attributes for color swatches', () => {
       render(<ThemesContent />)
       
-      const firstButton = screen.getAllByRole('button')[0]
-      firstButton.focus()
-      
-      expect(document.activeElement).toBe(firstButton)
-    })
-  })
-
-  describe('Edge Cases', () => {
-    it('handles rapid theme switching', async () => {
-      render(<ThemesContent />)
-      
-      const professionalButton = screen.getByText('Professional').closest('[class*="card"]')?.querySelector('button')
-      const cyberpunkButton = screen.getByText('Cyberpunk').closest('[class*="card"]')?.querySelector('button')
-      
-      // Rapidly switch between themes
-      await user.click(professionalButton!)
-      await user.click(cyberpunkButton!)
-      await user.click(professionalButton!)
-      
-      // Should handle without errors
-      expect(screen.getByText('Themes')).toBeInTheDocument()
+      const colorSwatches = screen.getAllByTitle(/Primary|Secondary|Accent/)
+      expect(colorSwatches.length).toBeGreaterThan(0)
     })
 
-    it('handles theme application with missing DOM elements', () => {
-      // Mock document.documentElement to be undefined
-      const originalDocumentElement = document.documentElement
-      Object.defineProperty(document, 'documentElement', {
-        value: undefined,
-        writable: true,
-      })
-      
+    it('maintains proper focus management for buttons', () => {
       render(<ThemesContent />)
       
-      // Should not throw errors
-      expect(screen.getByText('Themes')).toBeInTheDocument()
-      
-      // Restore original
-      Object.defineProperty(document, 'documentElement', {
-        value: originalDocumentElement,
-        writable: true,
+      const applyButtons = screen.getAllByText('Apply Theme')
+      applyButtons.forEach(button => {
+        expect(button).toHaveAttribute('type', 'button')
       })
     })
   })
 
-  describe('Branch Coverage Improvements', () => {
-    it('covers getThemeLogo fallback branch for unknown theme', () => {
-      // This test specifically targets line 296 - the fallback in getThemeLogo
-      // We need to test the case where theme.id is not in themeLogos
-      // Since we can't easily mock the theme data, we'll test the component behavior
+  describe('Responsive Behavior', () => {
+    it('adapts grid layout for different screen sizes', () => {
       render(<ThemesContent />)
       
-      // The component should render without errors even with unknown theme IDs
-      expect(screen.getByText('Themes')).toBeInTheDocument()
+      const gridContainer = screen.getByRole('main', { hidden: true })
+      expect(gridContainer).toHaveClass(
+        'grid-cols-1',      // Mobile
+        'md:grid-cols-2',   // Tablet
+        'lg:grid-cols-2',   // Laptop
+        'xl:grid-cols-3'    // Desktop
+      )
     })
 
-    it('covers window check branch in applyTheme', async () => {
-      // This test specifically targets line 366 - the window check
-      const originalWindow = global.window
-      
-      // Mock window as undefined to test the branch
-      // @ts-ignore
-      global.window = undefined
-      
+    it('maintains proper spacing across different screen sizes', () => {
       render(<ThemesContent />)
       
-      const professionalButton = screen.getByText('Professional').closest('[class*="card"]')?.querySelector('button')
-      await user.click(professionalButton!)
+      const gridContainer = screen.getByRole('main', { hidden: true })
+      expect(gridContainer).toHaveClass('gap-8')
+    })
+  })
+
+  describe('Theme Selection State', () => {
+    it('shows selected state for current theme', async () => {
+      render(<ThemesContent />)
       
-      // Should not throw errors even when window is undefined
-      expect(screen.getByText('Themes')).toBeInTheDocument()
+      // Check if any theme shows as selected initially
+      const appliedButtons = screen.queryAllByText('✓ Applied')
+      const applyButtons = screen.getAllByText('Apply Theme')
       
-      // Restore window
-      global.window = originalWindow
+      // Should have either applied or apply buttons, not both
+      expect(appliedButtons.length + applyButtons.length).toBe(themes.length)
+    })
+
+    it('updates selection state when theme is changed', async () => {
+      render(<ThemesContent />)
+      
+      const applyButtons = screen.getAllByText('Apply Theme')
+      if (applyButtons.length > 0) {
+        fireEvent.click(applyButtons[0])
+        
+        await waitFor(() => {
+          expect(screen.getByText('✓ Applied')).toBeInTheDocument()
+        })
+      }
     })
   })
 })

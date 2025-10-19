@@ -48,7 +48,7 @@ export default function LoginPage() {
 
           localStorage.setItem("user", JSON.stringify(userData))
           setIsLoading(false)
-          router.push("/dashboard")
+          router.push("/home")
         } catch (error) {
           // Handle localStorage errors gracefully
           console.error('Login failed:', error)

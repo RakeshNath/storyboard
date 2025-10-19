@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -9,40 +9,24 @@ import { CheckCircle, Star, Users, Zap } from "lucide-react"
 
 export default function HomePage() {
   const router = useRouter()
-  const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
     // Only run on client side
     if (typeof window !== "undefined") {
       try {
-        // Check if user is logged in
+        // Check if user is logged in using the auth function
         const user = localStorage.getItem("user")
         if (user) {
           // Try to parse user data to validate it's valid JSON
           JSON.parse(user)
-          router.push("/dashboard")
+                 router.push("/home")
         }
       } catch (error) {
         // If user data is invalid JSON, continue to show homepage
+        console.log("Invalid user data, showing homepage")
       }
-      setIsLoading(false)
     }
   }, [router])
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <div 
-            className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"
-            role="status"
-            aria-label="Loading"
-          ></div>
-          <p className="mt-4 text-muted-foreground">Loading...</p>
-        </div>
-      </div>
-    )
-  }
 
   return (
     <div className="min-h-screen bg-background">

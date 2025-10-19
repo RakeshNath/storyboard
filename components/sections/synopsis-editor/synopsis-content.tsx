@@ -11,6 +11,10 @@ export function SynopsisContent({ editor, pageCount, wordCount, characterCount }
       <EditorContent 
         editor={editor} 
         className="flex-1 prose prose-sm max-w-none p-4 focus:outline-none"
+        style={{ 
+          backgroundColor: 'white',
+          color: 'black'
+        }}
         data-testid="synopsis-editor-content"
       />
       

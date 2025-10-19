@@ -1,4 +1,4 @@
-export { SynopsisEditor } from './synopsis-editor'
+export { SynopsisEditor } from '../synopsis-editor'
 export { SynopsisHeader } from './synopsis-header'
 export { SynopsisToolbar } from './synopsis-toolbar'
 export { SynopsisContent } from './synopsis-content'
